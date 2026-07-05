@@ -1,20 +1,20 @@
 summon kotlin.math.PI
 
-skibidi greet(name: lore) spits lore bet
+tung greet(name: lore) spits lore {
     yeet "Hello, " + name
-periodt
+}
 
-gyatt count = 0
-grind (count flops 3) bet
+beta count = 0
+grind (count < 3) {
     yap("Number $count")
     count gains 1
-periodt
+}
 
-sus (count twins 3) bet
+if (count is 3) {
     yap("Loop finished")
-bruh bet
+} else {
     yap("Still looping")
-periodt
+}
 
 yap(greet("World"))
 yap("PI is $PI")

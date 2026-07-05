@@ -4,21 +4,22 @@ A statically typed, null-safe, object-oriented programming language for
 teaching web dev but with brainrot syntax. Compiles to Kotlin so every Java/Kotlin library works via `summon`.
 
 ```rotlin
-gyatt score = 0
+beta score = 0
 
-drop site on 3000 bet
-    page("/") bet
+drop site on 3000 {
+    page("/") {
         bigyap("AURA CLICKER")
         yap("your aura: $score")
-        smash("+1 aura") does bet
+        smash("+1 aura") does {
             score gains 1
-        periodt
-    periodt
-periodt
+        }
+    }
+}
 ```
 
 Save the file and the browser updates itself. Break the code and the
-compiler roasts you *inside the page* and tells you exactly how to fix it.
+compiler reports the error *inside the page* and tells you exactly how
+to fix it.
 
 ## Why
 
@@ -27,10 +28,10 @@ pitch: instant dopamine (a webpage you can show people), real concepts
 (static types, null safety, OOP, inheritance) hiding under meme words,
 and error messages that teach instead of terrify.
 
-This is **not** a token swapper. Rotlin has its own block syntax
-(`bet` / `periodt`), word operators (`twins`, `clears`, `gains`), its own
-type checker with flow-sensitive smart casts, and a compiler that maps
-every error - including JVM runtime crashes - back to your `.rot` line.
+This is **not** a token swapper. Rotlin has its own line-oriented block
+syntax, word operators (`is`, `aint`, `gains`), its own type checker
+with flow-sensitive smart casts, and a compiler that maps every error -
+including JVM runtime crashes - back to your `.rot` line.
 
 ## Install
 
@@ -164,9 +165,9 @@ The emitter keeps generated Kotlin line-aligned with the source
 (`rot line = kt line − 2`), so kotlinc diagnostics **and** runtime stack
 traces map back to `.rot` lines by subtraction.
 
-Diagnostics are the product: every error is a roast + a plain-English
-explanation + a concrete fix, and a clean compile is worth
-`+1000 aura. W code, no cap.`
+Diagnostics are the product: every error is a plain-Kotlin-style
+message + a concrete fix, and a clean compile is worth
+`+1000 aura. Compiled with no errors and no warnings.`
 
 ## Tests
 
@@ -176,7 +177,7 @@ gradlew.bat test
 
 Unit tests per compiler stage, golden emissions, and end-to-end tests
 that compile-and-run real `.rot` programs - including a full
-serve, click, hot-reload, roast-overlay loop over HTTP.
+serve, click, hot-reload, error-overlay loop over HTTP.
 
 ## Cutting a release (maintainers)
 

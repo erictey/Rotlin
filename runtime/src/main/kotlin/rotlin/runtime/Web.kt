@@ -26,7 +26,7 @@ class SiteSpec internal constructor(val port: Int, val pages: List<PageSpec>)
 class PageSpec internal constructor(val path: String, val body: PageContext.() -> Unit)
 
 /**
- * Receiver for `page("/") bet ... periodt` blocks. Members shadow the console
+ * Receiver for `page("/") { ... }` blocks. Members shadow the console
  * top-levels - inside a page, `yap` writes a paragraph, not stdout.
  */
 class PageContext internal constructor(private val pagePath: String) {

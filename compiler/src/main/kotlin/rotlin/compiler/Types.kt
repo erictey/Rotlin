@@ -1,7 +1,7 @@
 package rotlin.compiler
 
 /**
- * Rotlin's type universe. `display()` speaks Rotlin, not Kotlin - kids see
+ * Rotlin's type universe. `display()` speaks Rotlin, not Kotlin - users see
  * `maybe lore`, never `String?`. UnknownT is the cascade suppressor: anything
  * unresolvable types as Unknown, errors once, and stays silent downstream
  * (kotlinc remains the backstop).
@@ -29,9 +29,9 @@ sealed interface RType {
         override fun display() = "nothing"
     }
 
-    /** The type of the `ghosted` literal itself. */
-    object GhostT : RType {
-        override fun display() = "ghosted"
+    /** The type of the `null` literal itself. */
+    object NullT : RType {
+        override fun display() = "null"
     }
 
     data class MaybeT(val inner: RType) : RType {
@@ -55,7 +55,7 @@ sealed interface RType {
         override fun display() = "range"
     }
 
-    /** An instance of a user sigma/npc. Members type as Unknown; kotlinc backstops. */
+    /** An instance of a user class/npc. Members type as Unknown; kotlinc backstops. */
     data class ClassT(val name: String) : RType {
         override fun display() = name
     }
@@ -64,9 +64,9 @@ sealed interface RType {
 /** True when a value of [from] can be used where [to] is expected. */
 fun assignable(from: RType, to: RType): Boolean = when {
     from is RType.UnknownT || to is RType.UnknownT -> true
-    to is RType.MaybeT -> from is RType.GhostT || assignable(from, to.inner) ||
+    to is RType.MaybeT -> from is RType.NullT || assignable(from, to.inner) ||
         (from is RType.MaybeT && assignable(from.inner, to.inner))
-    from is RType.GhostT -> false // ghost only fits into maybe
+    from is RType.NullT -> false // null only fits into maybe
     from is RType.MaybeT -> false // maybe doesn't fit a definite slot
     from is RType.SquadT && to is RType.SquadT -> assignable(from.elem, to.elem)
     from is RType.StashT && to is RType.StashT ->

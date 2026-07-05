@@ -1,30 +1,30 @@
-sigma Question(rizz prompt: lore, rizz answer: lore) bet
-    skibidi check(guess: lore) spits fact bet
-        yeet guess twins me.answer
-    periodt
-periodt
+class Question(alpha prompt: lore, alpha answer: lore) {
+    tung check(guess: lore) spits fact {
+        yeet guess is this.answer
+    }
+}
 
-rizz questions = squad(
+alpha questions = squad(
     Question("What is 2 + 2?", "4"),
     Question("Capital of France?", "Paris")
 )
 
-gyatt score = 0
-mog (q inside questions) bet
+beta score = 0
+mog (q inside questions) {
     yap(q.prompt)
-    sus (q.check("4")) bet
+    if (q.check("4")) {
         yap("  correct")
         score gains 1
-    bruh bet
+    } else {
         yap("  wrong")
-    periodt
-periodt
+    }
+}
 
-vibecheck (score) bet
+when (score) {
     0 -> yap("Final score: 0")
     1 -> yap("Final score: 1")
-    bruh -> yap("Final score: perfect")
-periodt
+    else -> yap("Final score: perfect")
+}
 
 /* The same program in Kotlin (what Rotlin compiles this to.
    `yap`/`squad` are Rotlin runtime helpers - println / listOf):

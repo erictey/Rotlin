@@ -3,9 +3,9 @@ package rotlin.compiler
 import rotlin.compiler.RType.AuraT
 import rotlin.compiler.RType.ClassT
 import rotlin.compiler.RType.FactT
-import rotlin.compiler.RType.GhostT
 import rotlin.compiler.RType.LoreT
 import rotlin.compiler.RType.MaybeT
+import rotlin.compiler.RType.NullT
 import rotlin.compiler.RType.RangeT
 import rotlin.compiler.RType.RatioT
 import rotlin.compiler.RType.SquadT
@@ -15,11 +15,11 @@ import rotlin.compiler.RType.UnknownT
 
 /**
  * Two passes: collect signatures, then check bodies with a scope chain plus
- * flow facts for smart casts. Philosophy: this checker owns the kid-facing
+ * flow facts for smart casts. Philosophy: this checker owns the user-facing
  * errors; kotlinc is ground truth for anything it can't see (interop members
  * type as Unknown and stay silent).
  *
- * Smart casts narrow only *stable* names (rizz locals and params) - the same
+ * Smart casts narrow only *stable* names (alpha locals and params) - the same
  * rule as Kotlin, which matters because the emitted Kotlin must smart-cast
  * too, or kotlinc would reject code we approved.
  */
@@ -93,7 +93,7 @@ class TypeChecker(private val diags: DiagnosticBag) {
     /** Overlay frames of narrowed types (smart casts). */
     private val facts = ArrayDeque<MutableMap<String, RType>>()
 
-    /** Names whose narrowing was denied because they're gyatt - for the teaching roast. */
+    /** Names whose narrowing was denied because they're beta - for the teaching hint. */
     private val deniedFacts = ArrayDeque<MutableSet<String>>()
 
     fun check(program: Program) {
@@ -106,10 +106,10 @@ class TypeChecker(private val diags: DiagnosticBag) {
         }
         // pre-register classes, vibes and npcs so order doesn't matter
         for (item in program.items) when (item) {
-            is SigmaDecl -> {
+            is ClassDecl -> {
                 classes[item.name] = item.ctorParams.map { it.name to resolveType(it.type) }
                 if (item.name in builtins) {
-                    diags.warning("W_SHADOW", "`${item.name}` is already a rotlin thing", item.line, item.col,
+                    diags.warning("W_SHADOW", "`${item.name}` shadows a built-in rotlin function", item.line, item.col,
                         hint = "pick a different name")
                 }
             }
@@ -130,12 +130,12 @@ class TypeChecker(private val diags: DiagnosticBag) {
             if (s !is FunDecl) continue
             if (s.name in builtins) {
                 diags.warning(
-                    "W_SHADOW", "`${s.name}` is already a rotlin thing - your version hides it",
+                    "W_SHADOW", "`${s.name}` shadows a built-in rotlin function - your version hides it",
                     s.line, s.col, hint = "pick a different name",
                 )
             }
             if (userFuns.containsKey(s.name)) {
-                diags.error("E_DOUBLE_COOK", "`${s.name}` got cooked twice", s.line, s.col,
+                diags.error("E_DUPLICATE", "`${s.name}` is already defined", s.line, s.col,
                     hint = "rename one of them")
             }
             userFuns[s.name] = FunSig(
@@ -162,7 +162,7 @@ class TypeChecker(private val diags: DiagnosticBag) {
             )
             else -> {
                 didYouMean(ref.name, typeNames)?.let { guess ->
-                    diags.warning("W_TYPE_GUESS", "`${ref.name}` isn't a rotlin type", ref.line, ref.col,
+                    diags.warning("W_TYPE_GUESS", "`${ref.name}` is not a rotlin type", ref.line, ref.col,
                         hint = "did you mean `$guess`?")
                 }
                 UnknownT // interop types pass through; kotlinc backstops
@@ -177,7 +177,7 @@ class TypeChecker(private val diags: DiagnosticBag) {
             is FunDecl -> checkFunDecl(stmt, scope)
             is VarDecl -> checkVarDecl(stmt, scope)
             is Assign -> checkAssign(stmt, scope)
-            is SusStmt -> checkSus(stmt, scope)
+            is IfStmt -> checkIf(stmt, scope)
             is GrindStmt -> {
                 requireFact(checkExpr(stmt.cond, scope), stmt.cond)
                 loopDepth++
@@ -186,18 +186,18 @@ class TypeChecker(private val diags: DiagnosticBag) {
             }
             is YeetStmt -> checkYeet(stmt, scope)
             is DipStmt -> if (loopDepth == 0) {
-                diags.error("E_DIP_NOWHERE", "you can only dip out of a loop", stmt.line, stmt.col,
+                diags.error("E_DIP_NOWHERE", "`dip` is only allowed inside a loop", stmt.line, stmt.col,
                     hint = "dip belongs inside grind (or mog)")
             }
             is SkipStmt -> if (loopDepth == 0) {
-                diags.error("E_SKIP_NOWHERE", "you can only skip inside a loop", stmt.line, stmt.col,
+                diags.error("E_SKIP_NOWHERE", "`skip` is only allowed inside a loop", stmt.line, stmt.col,
                     hint = "skip belongs inside grind (or mog)")
             }
             is ExprStmt -> checkExpr(stmt.expr, scope)
-            is SigmaDecl -> checkSigma(stmt, scope)
+            is ClassDecl -> checkClass(stmt, scope)
             is NpcDecl -> checkMembers(stmt.name, stmt.members, Scope(scope), scope)
             is VibeDecl -> checkMembers(stmt.name, stmt.members, Scope(scope), scope)
-            is VibecheckStmt -> {
+            is WhenStmt -> {
                 val subjT = checkExpr(stmt.subject, scope)
                 for (b in stmt.branches) {
                     b.values?.forEach { v ->
@@ -205,8 +205,8 @@ class TypeChecker(private val diags: DiagnosticBag) {
                         if (!assignable(vT, subjT) && !assignable(subjT, vT)) {
                             diags.error(
                                 "E_TYPE_MISMATCH",
-                                "this branch checks ${vT.display()} but the vibecheck is on ${subjT.display()}",
-                                v.line, v.col, hint = "match the type you're vibechecking",
+                                "this branch checks ${vT.display()} but the when subject is ${subjT.display()}",
+                                v.line, v.col, hint = "match the subject's type",
                             )
                         }
                     }
@@ -220,12 +220,12 @@ class TypeChecker(private val diags: DiagnosticBag) {
                     is RangeT -> AuraT
                     is UnknownT -> UnknownT
                     is StashT -> {
-                        diags.error("E_TYPE_MISMATCH", "you can't mog a whole stash", stmt.iterable.line,
-                            stmt.iterable.col, hint = "mog a squad or a range like `1 through 10`")
+                        diags.error("E_TYPE_MISMATCH", "you can't iterate over a whole stash", stmt.iterable.line,
+                            stmt.iterable.col, hint = "mog over a squad or a range like `1 through 10`")
                         UnknownT
                     }
                     else -> {
-                        diags.error("E_TYPE_MISMATCH", "you can't mog through ${iterT.display()}",
+                        diags.error("E_TYPE_MISMATCH", "you can't iterate over ${iterT.display()}",
                             stmt.iterable.line, stmt.iterable.col,
                             hint = "mog wants a squad or a range like `1 through 10`")
                         UnknownT
@@ -237,7 +237,7 @@ class TypeChecker(private val diags: DiagnosticBag) {
                 for (s in stmt.body.stmts) checkStmt(s, bodyScope)
                 loopDepth--
             }
-            is FinnaStmt -> {
+            is TryStmt -> {
                 checkBlock(stmt.tryBlock, scope)
                 val catchScope = Scope(scope)
                 catchScope.declare(VarSymbol(stmt.catchName, UnknownT, mutable = false))
@@ -288,23 +288,23 @@ class TypeChecker(private val diags: DiagnosticBag) {
         if (sig.returns != UnitT && !blockReturns(body)) {
             diags.error(
                 "E_MISSING_YEET",
-                "`${fn.name}` promises to spit ${sig.returns.display()} but some path never yeets",
+                "`${fn.name}` declares `spits ${sig.returns.display()}` but not every path yeets a value",
                 fn.line, fn.col,
                 hint = "make sure every branch ends with `yeet <value>`",
             )
         }
     }
 
-    private fun checkSigma(decl: SigmaDecl, outer: Scope) {
+    private fun checkClass(decl: ClassDecl, outer: Scope) {
         val classScope = Scope(outer)
         for (p in decl.ctorParams) {
-            classScope.declare(VarSymbol(p.name, resolveType(p.type), p.kind == CtorParamKind.GYATT))
+            classScope.declare(VarSymbol(p.name, resolveType(p.type), p.kind == CtorParamKind.BETA))
         }
         decl.superRef?.let { sup ->
             val args = sup.args.map { checkExpr(it, outer) }
             classes[sup.name]?.let { ctorParams ->
                 if (args.size != ctorParams.size) {
-                    diags.error("E_ARITY", "`${sup.name}` needs ${ctorParams.size} thing(s) to be built",
+                    diags.error("E_ARITY", "`${sup.name}` needs ${ctorParams.size} argument(s) to be constructed",
                         sup.line, sup.col)
                 }
             }
@@ -328,12 +328,12 @@ class TypeChecker(private val diags: DiagnosticBag) {
     private fun stmtReturns(stmt: Stmt): Boolean = when (stmt) {
         is YeetStmt -> true
         is CrashoutStmt -> true // throwing exits the function too
-        is FinnaStmt -> blockReturns(stmt.tryBlock) && blockReturns(stmt.catchBlock)
-        is SusStmt -> {
+        is TryStmt -> blockReturns(stmt.tryBlock) && blockReturns(stmt.catchBlock)
+        is IfStmt -> {
             val e = stmt.elseBranch
             when (e) {
                 is Block -> blockReturns(stmt.thenBlock) && blockReturns(e)
-                is SusStmt -> blockReturns(stmt.thenBlock) && stmtReturns(e)
+                is IfStmt -> blockReturns(stmt.thenBlock) && stmtReturns(e)
                 else -> false
             }
         }
@@ -348,18 +348,18 @@ class TypeChecker(private val diags: DiagnosticBag) {
                 if (!assignable(initT, declared)) reportMismatch(initT, declared, v.init)
                 declared
             }
-            initT == GhostT -> {
+            initT == NullT -> {
                 diags.error(
-                    "E_GHOST_ONLY", "`${v.name}` starts ghosted so rotlin can't tell what it should be",
+                    "E_NULL_INIT", "`${v.name}` is initialized to null, so its type can't be inferred",
                     v.line, v.col,
-                    hint = "give it a type: `${if (v.mutable) "gyatt" else "rizz"} ${v.name}: maybe lore = ghosted`",
+                    hint = "give it a type: `${if (v.mutable) "beta" else "alpha"} ${v.name}: maybe lore = null`",
                 )
                 UnknownT
             }
             else -> initT
         }
         if (scope.declaredHere(v.name)) {
-            diags.error("E_DOUBLE_COOK", "`${v.name}` already exists here", v.line, v.col,
+            diags.error("E_DUPLICATE", "`${v.name}` is already declared in this scope", v.line, v.col,
                 hint = "pick a different name (or just assign: `${v.name} = ...`)")
         }
         scope.declare(VarSymbol(v.name, finalT, v.mutable))
@@ -399,9 +399,9 @@ class TypeChecker(private val diags: DiagnosticBag) {
         }
         if (!sym.mutable) {
             diags.error(
-                "E_RIZZ_LOCKED", "`${target.name}` is rizz - locked in, no takebacks",
+                "E_ALPHA_LOCKED", "`${target.name}` is an alpha - it can't be reassigned",
                 a.line, a.col,
-                hint = "declare it `gyatt ${target.name} = ...` if it needs to change",
+                hint = "declare it `beta ${target.name} = ...` if it needs to change",
             )
         }
         when (a.op) {
@@ -431,7 +431,7 @@ class TypeChecker(private val diags: DiagnosticBag) {
         killFacts(target.name)
     }
 
-    private fun checkSus(s: SusStmt, scope: Scope) {
+    private fun checkIf(s: IfStmt, scope: Scope) {
         requireFact(checkExpr(s.cond, scope), s.cond)
         val flow = extractFacts(s.cond, scope)
 
@@ -450,7 +450,7 @@ class TypeChecker(private val diags: DiagnosticBag) {
                 facts.removeLast()
                 deniedFacts.removeLast()
             }
-            is SusStmt -> {
+            is IfStmt -> {
                 facts.addLast(flow.elseFacts.toMutableMap())
                 deniedFacts.addLast(flow.elseDenied.toMutableSet())
                 checkStmt(e, scope)
@@ -470,14 +470,14 @@ class TypeChecker(private val diags: DiagnosticBag) {
         val fn = currentFun
         if (fn == null) {
             diags.error("E_YEET_NOWHERE", "there's nothing to yeet out of here", y.line, y.col,
-                hint = "yeet only works inside a skibidi function")
+                hint = "yeet only works inside a tung function")
             y.value?.let { checkExpr(it, scope) }
             return
         }
         val valueT = y.value?.let { checkExpr(it, scope) } ?: UnitT
         when {
             fn.returns == UnitT && y.value != null -> diags.error(
-                "E_TYPE_MISMATCH", "`${fn.name}` doesn't spit anything, but you're yeeting a value",
+                "E_TYPE_MISMATCH", "`${fn.name}` doesn't spit anything, but this yeet has a value",
                 y.line, y.col, hint = "add `spits ${valueT.display()}` to the function",
             )
             fn.returns != UnitT && y.value == null -> diags.error(
@@ -486,7 +486,7 @@ class TypeChecker(private val diags: DiagnosticBag) {
             )
             fn.returns != UnitT && !assignable(valueT, fn.returns) -> diags.error(
                 "E_TYPE_MISMATCH",
-                "`${fn.name}` spits ${fn.returns.display()} but you're yeeting ${valueT.display()}",
+                "`${fn.name}` spits ${fn.returns.display()} but this yeets ${valueT.display()}",
                 y.line, y.col, hint = "match the spits type",
             )
             else -> {}
@@ -503,14 +503,14 @@ class TypeChecker(private val diags: DiagnosticBag) {
     )
 
     private fun extractFacts(cond: Expr, scope: Scope): Flow = when {
-        cond is Binary && cond.op == BinOp.AINT && cond.left is NameRef && cond.right is GhostedLit ->
-            ghostFlow(cond.left, scope, narrowThen = true)
-        cond is Binary && cond.op == BinOp.AINT && cond.right is NameRef && cond.left is GhostedLit ->
-            ghostFlow(cond.right, scope, narrowThen = true)
-        cond is Binary && cond.op == BinOp.TWINS && cond.left is NameRef && cond.right is GhostedLit ->
-            ghostFlow(cond.left, scope, narrowThen = false)
-        cond is Binary && cond.op == BinOp.TWINS && cond.right is NameRef && cond.left is GhostedLit ->
-            ghostFlow(cond.right, scope, narrowThen = false)
+        cond is Binary && cond.op == BinOp.AINT && cond.left is NameRef && cond.right is NullLit ->
+            nullFlow(cond.left, scope, narrowThen = true)
+        cond is Binary && cond.op == BinOp.AINT && cond.right is NameRef && cond.left is NullLit ->
+            nullFlow(cond.right, scope, narrowThen = true)
+        cond is Binary && cond.op == BinOp.IS && cond.left is NameRef && cond.right is NullLit ->
+            nullFlow(cond.left, scope, narrowThen = false)
+        cond is Binary && cond.op == BinOp.IS && cond.right is NameRef && cond.left is NullLit ->
+            nullFlow(cond.right, scope, narrowThen = false)
         cond is Binary && cond.op == BinOp.AND -> {
             val l = extractFacts(cond.left, scope)
             val r = extractFacts(cond.right, scope)
@@ -534,7 +534,7 @@ class TypeChecker(private val diags: DiagnosticBag) {
         else -> Flow()
     }
 
-    private fun ghostFlow(name: NameRef, scope: Scope, narrowThen: Boolean): Flow {
+    private fun nullFlow(name: NameRef, scope: Scope, narrowThen: Boolean): Flow {
         val sym = scope.lookup(name.name) ?: return Flow()
         val inner = (sym.type as? MaybeT)?.inner ?: return Flow()
         return if (sym.mutable) {
@@ -562,7 +562,7 @@ class TypeChecker(private val diags: DiagnosticBag) {
         is IntLit -> AuraT
         is DoubleLit -> RatioT
         is BoolLit -> FactT
-        is GhostedLit -> GhostT
+        is NullLit -> NullT
         is StringTmpl -> {
             expr.parts.filterIsInstance<TmplNode.Interp>().forEach { checkExpr(it.expr, scope) }
             LoreT
@@ -572,13 +572,13 @@ class TypeChecker(private val diags: DiagnosticBag) {
             when {
                 sym != null -> factType(expr.name) ?: sym.type
                 lookupFun(expr.name) != null || expr.name in builtins -> {
-                    diags.error("E_WHO_IS_THAT", "`${expr.name}` is a function - you have to call it",
+                    diags.error("E_UNRESOLVED", "`${expr.name}` is a function - it has to be called",
                         expr.line, expr.col, hint = "add parentheses: `${expr.name}(...)`")
                     UnknownT
                 }
                 expr.name in classes -> {
-                    diags.error("E_WHO_IS_THAT", "`${expr.name}` is a blueprint, not a value",
-                        expr.line, expr.col, hint = "build one: `${expr.name}(...)`")
+                    diags.error("E_UNRESOLVED", "`${expr.name}` is a class, not a value",
+                        expr.line, expr.col, hint = "construct one: `${expr.name}(...)`")
                     UnknownT
                 }
                 else -> {
@@ -587,11 +587,11 @@ class TypeChecker(private val diags: DiagnosticBag) {
                 }
             }
         }
-        is MeRef -> {
+        is ThisRef -> {
             val cls = currentClass
             if (cls == null) {
-                diags.error("E_ME_NOWHERE", "`me` only exists inside a sigma or npc", expr.line, expr.col,
-                    hint = "outside a class there is no me, only vibes")
+                diags.error("E_THIS_NOWHERE", "`this` is only available inside a class or npc", expr.line, expr.col,
+                    hint = "move this code into a class member")
                 UnknownT
             } else ClassT(cls)
         }
@@ -612,12 +612,12 @@ class TypeChecker(private val diags: DiagnosticBag) {
                             "this stash uses ${recvT.key.display()} keys, got ${idxT.display()}",
                             expr.index.line, expr.index.col)
                     }
-                    MaybeT(recvT.value) // the key might not be there - might be ghosted
+                    MaybeT(recvT.value) // the key might not be there - might be null
                 }
                 is MaybeT -> {
-                    diags.error("E_NULL_UNSAFE", "that might be ghosted - you can't index a ghost",
+                    diags.error("E_NULL_UNSAFE", "that might be null - it can't be indexed",
                         expr.line, expr.col,
-                        hint = "check `aint ghosted` first, or use `otherwise`")
+                        hint = "check `aint null` first, or use `otherwise`")
                     UnknownT
                 }
                 is UnknownT -> UnknownT
@@ -644,19 +644,19 @@ class TypeChecker(private val diags: DiagnosticBag) {
             }
         }
         is Binary -> checkBinary(expr, scope)
-        is DeadassExpr -> {
+        is DeadahhExpr -> {
             val t = checkExpr(expr.operand, scope)
             when (t) {
                 is MaybeT -> t.inner
-                is GhostT -> {
-                    diags.warning("W_ALWAYS_GHOSTED", "that's literally always ghosted - this WILL crash",
+                is NullT -> {
+                    diags.warning("W_ALWAYS_NULL", "that is always null - this will crash at runtime",
                         expr.line, expr.col, hint = "give it a real value first")
                     UnknownT
                 }
                 is UnknownT -> UnknownT
                 else -> {
-                    diags.warning("W_NEVER_GHOSTED", "that was never ghosted - deadass does nothing here",
-                        expr.line, expr.col, hint = "you can just delete the deadass")
+                    diags.warning("W_NEVER_NULL", "that is never null - `deadahh` does nothing here",
+                        expr.line, expr.col, hint = "you can just delete the deadahh")
                     t
                 }
             }
@@ -670,7 +670,7 @@ class TypeChecker(private val diags: DiagnosticBag) {
         val r = checkExpr(b.right, scope)
 
         fun mixed(): RType {
-            diags.error("E_MIXED_NUMBERS", "aura and ratio don't mix raw", b.line, b.col,
+            diags.error("E_MIXED_NUMBERS", "aura and ratio don't mix implicitly", b.line, b.col,
                 hint = "wrap one side: `ratio(x)` makes it a ratio")
             return UnknownT
         }
@@ -692,7 +692,7 @@ class TypeChecker(private val diags: DiagnosticBag) {
                 l == LoreT -> LoreT // lore + anything = bigger lore
                 l is UnknownT || r is UnknownT -> UnknownT
                 (l == AuraT || l == RatioT) && r == LoreT -> {
-                    diags.error("E_TYPE_MISMATCH", "number + lore doesn't cook", b.line, b.col,
+                    diags.error("E_TYPE_MISMATCH", "number + lore is not allowed", b.line, b.col,
                         hint = "put the lore first, or wrap: `lore(x) + ...`")
                     UnknownT
                 }
@@ -702,7 +702,7 @@ class TypeChecker(private val diags: DiagnosticBag) {
             BinOp.MUL -> numeric("*")
             BinOp.DIV -> numeric("/")
             BinOp.MOD -> numeric("%")
-            BinOp.CLEARS, BinOp.FLOPS, BinOp.ATLEAST, BinOp.ATMOST -> {
+            BinOp.GT, BinOp.LT, BinOp.ATLEAST, BinOp.ATMOST -> {
                 when {
                     l is UnknownT || r is UnknownT -> {}
                     l == AuraT && r == AuraT -> {}
@@ -717,7 +717,7 @@ class TypeChecker(private val diags: DiagnosticBag) {
                 }
                 FactT
             }
-            BinOp.TWINS, BinOp.AINT -> FactT
+            BinOp.IS, BinOp.AINT -> FactT
             BinOp.AND, BinOp.OR -> {
                 requireFact(l, b.left)
                 requireFact(r, b.right)
@@ -741,10 +741,10 @@ class TypeChecker(private val diags: DiagnosticBag) {
                     }
                     if (r is MaybeT) MaybeT(l.inner) else l.inner
                 }
-                is GhostT -> r
+                is NullT -> r
                 is UnknownT -> UnknownT
                 else -> {
-                    diags.warning("W_NEVER_GHOSTED", "the left side is never ghosted - otherwise does nothing",
+                    diags.warning("W_NEVER_NULL", "the left side is never null - otherwise does nothing",
                         b.line, b.col, hint = "you can delete everything from `otherwise` on")
                     l
                 }
@@ -759,28 +759,28 @@ class TypeChecker(private val diags: DiagnosticBag) {
 
         if (receiverT is MaybeT && !m.safe) {
             val who = receiverName?.let { "`$it`" } ?: "that"
-            val gyattNote = if (receiverName != null && isDenied(receiverName)) {
-                "$who is gyatt, so the vibe check doesn't stick (it could flip any moment) - make it rizz, or stash it in a rizz first. or: "
+            val betaNote = if (receiverName != null && isDenied(receiverName)) {
+                "$who is beta, so the null check doesn't hold (it could change at any moment) - make it alpha, or copy it into an alpha first. or: "
             } else ""
             diags.error(
                 "E_NULL_UNSAFE",
-                "$who might be ghosted rn - you can't just grab `.${m.name}` off a ghost",
+                "$who might be null - `.${m.name}` needs a null check first",
                 m.line, m.col,
-                hint = gyattNote +
-                    "3 ways out: check first `sus (${receiverName ?: "it"} aint ghosted) bet ... periodt`, " +
-                    "go safe `?.${m.name}`, or swear on it `${receiverName ?: "it"} deadass`",
+                hint = betaNote +
+                    "3 ways out: check first `if (${receiverName ?: "it"} aint null) { ... }`, " +
+                    "go safe `?.${m.name}`, or assert `${receiverName ?: "it"} deadahh`",
             )
             return memberType(m.receiver, (receiverT).inner, m.name, argTypes, m)
         }
 
-        if (m.safe && receiverT !is MaybeT && receiverT !is UnknownT && receiverT !is GhostT) {
-            diags.warning("W_NEVER_GHOSTED", "that's never ghosted - the `?.` can just be `.`",
+        if (m.safe && receiverT !is MaybeT && receiverT !is UnknownT && receiverT !is NullT) {
+            diags.warning("W_NEVER_NULL", "that is never null - the `?.` can just be `.`",
                 m.line, m.col)
         }
 
         val baseT = when (receiverT) {
             is MaybeT -> receiverT.inner // safe access
-            is GhostT -> return UnknownT
+            is NullT -> return UnknownT
             else -> receiverT
         }
         val resultT = memberType(m.receiver, baseT, m.name, argTypes, m)
@@ -828,12 +828,12 @@ class TypeChecker(private val diags: DiagnosticBag) {
             // squad(...) and stash() are generic factories - special-cased
             if (name == "squad" && scope.lookup(name) == null) {
                 checkLambdaBlock()
-                val distinct = argTypes.filter { it !is UnknownT && it !is GhostT }.distinct()
+                val distinct = argTypes.filter { it !is UnknownT && it !is NullT }.distinct()
                 return when {
                     distinct.size > 1 -> {
                         diags.error("E_TYPE_MISMATCH",
-                            "squads don't mix - this one has ${distinct.joinToString(" and ") { it.display() }}",
-                            call.line, call.col, hint = "keep every member the same type")
+                            "squads don't mix element types - this one has ${distinct.joinToString(" and ") { it.display() }}",
+                            call.line, call.col, hint = "keep every element the same type")
                         SquadT(UnknownT)
                     }
                     else -> SquadT(distinct.firstOrNull() ?: UnknownT)
@@ -843,7 +843,7 @@ class TypeChecker(private val diags: DiagnosticBag) {
                 checkLambdaBlock()
                 if (argTypes.isNotEmpty()) {
                     diags.error("E_ARITY", "a stash starts empty", call.line, call.col,
-                        hint = "make it then fill it: `gyatt m: stash<lore, aura> = stash()` then `m[\"key\"] = 1`")
+                        hint = "make it then fill it: `beta m: stash<lore, aura> = stash()` then `m[\"key\"] = 1`")
                 }
                 return StashT(UnknownT, UnknownT)
             }
@@ -852,7 +852,7 @@ class TypeChecker(private val diags: DiagnosticBag) {
             classes[name]?.let { ctorParams ->
                 checkLambdaBlock()
                 if (argTypes.size != ctorParams.size) {
-                    diags.error("E_ARITY", "`$name` needs ${ctorParams.size} thing(s) to be built, you gave ${argTypes.size}",
+                    diags.error("E_ARITY", "`$name` needs ${ctorParams.size} argument(s) to be constructed, you gave ${argTypes.size}",
                         call.line, call.col,
                         hint = "it wants: ${ctorParams.joinToString(", ") { "${it.first}: ${it.second.display()}" }}")
                 } else {
@@ -870,13 +870,13 @@ class TypeChecker(private val diags: DiagnosticBag) {
             lookupFun(name)?.let { sig ->
                 if (call.lambda != null) {
                     diags.error("E_NO_LAMBDA", "`$name` doesn't take a block", call.line, call.col,
-                        hint = "remove the bet ... periodt after the call")
+                        hint = "remove the { ... } after the call")
                     checkLambdaBlock()
                 }
                 if (argTypes.size != sig.params.size) {
                     diags.error(
                         "E_ARITY",
-                        "`$name` needs ${sig.params.size} thing(s), you gave ${argTypes.size}",
+                        "`$name` needs ${sig.params.size} argument(s), you gave ${argTypes.size}",
                         call.line, call.col,
                         hint = "it wants: ${sig.params.joinToString(", ") { "${it.first}: ${it.second.display()}" }}",
                     )
@@ -898,7 +898,7 @@ class TypeChecker(private val diags: DiagnosticBag) {
             builtins[name]?.let { sig ->
                 if (scope.lookup(name) == null) { // a local variable can shadow a builtin
                     if (argTypes.size < sig.minArgs || argTypes.size > sig.maxArgs) {
-                        diags.error("E_ARITY", "`$name` takes ${sig.minArgs}..${sig.maxArgs} thing(s), you gave ${argTypes.size}",
+                        diags.error("E_ARITY", "`$name` takes ${sig.minArgs}..${sig.maxArgs} argument(s), you gave ${argTypes.size}",
                             call.line, call.col)
                     } else {
                         for ((i, at) in argTypes.withIndex()) {
@@ -911,7 +911,7 @@ class TypeChecker(private val diags: DiagnosticBag) {
                     }
                     if (call.lambda != null && !sig.takesLambda) {
                         diags.error("E_NO_LAMBDA", "`$name` doesn't take a block", call.line, call.col,
-                            hint = "remove the bet ... periodt after the call")
+                            hint = "remove the { ... } after the call")
                     }
                     checkLambdaBlock()
                     return sig.returns
@@ -940,34 +940,34 @@ class TypeChecker(private val diags: DiagnosticBag) {
     // ---- shared helpers ------------------------------------------------------------
 
     private fun requireFact(t: RType, at: Node) {
-        if (t != FactT && t !is UnknownT && t !is GhostT) {
-            diags.error("E_TYPE_MISMATCH", "that needs to be a fact (based or cringe), got ${t.display()}",
-                at.line, at.col, hint = "comparisons like `x clears 5` give you facts")
+        if (t != FactT && t !is UnknownT && t !is NullT) {
+            diags.error("E_TYPE_MISMATCH", "that needs to be a fact (true or false), got ${t.display()}",
+                at.line, at.col, hint = "comparisons like `x > 5` give you facts")
         }
     }
 
     private fun reportMismatch(from: RType, to: RType, at: Node) {
         val hint = when {
-            to is MaybeT || from !is GhostT -> "expected ${to.display()}"
+            to is MaybeT || from !is NullT -> "expected ${to.display()}"
             else -> "expected ${to.display()}"
         }
-        val extra = if (from is GhostT && to !is MaybeT) {
-            " - only `maybe` types can hold ghosted"
+        val extra = if (from is NullT && to !is MaybeT) {
+            " - only `maybe` types can hold null"
         } else ""
-        diags.error("E_TYPE_MISMATCH", "can't stuff ${from.display()} into ${to.display()}$extra",
-            at.line, at.col, hint = if (from is GhostT) "declare it `maybe ${to.display()}`" else hint)
+        diags.error("E_TYPE_MISMATCH", "can't assign ${from.display()} to ${to.display()}$extra",
+            at.line, at.col, hint = if (from is NullT) "declare it `maybe ${to.display()}`" else hint)
     }
 
     private fun unknownName(name: String, at: Node, scope: Scope, calling: Boolean = false) {
         val candidates = scope.allNames() + userFuns.keys + builtins.keys + classes.keys
         val guess = didYouMean(name, candidates)
         diags.error(
-            "E_WHO_IS_THAT",
-            "who is `$name`?? never heard of them",
+            "E_UNRESOLVED",
+            "unresolved reference: `$name`",
             at.line, at.col,
             hint = guess?.let { "did you mean `$it`?" }
-                ?: if (calling) "define it first: `skibidi $name(...) bet ... periodt`"
-                else "declare it first: `rizz $name = ...`",
+                ?: if (calling) "define it first: `tung $name(...) { ... }`"
+                else "declare it first: `alpha $name = ...`",
         )
     }
 

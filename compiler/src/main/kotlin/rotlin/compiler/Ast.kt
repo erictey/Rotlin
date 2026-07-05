@@ -25,14 +25,14 @@ sealed interface TypeRef : Node {
 // ---- program structure -----------------------------------------------------
 
 data class Program(
-    val hood: HoodDecl?,
+    val pkg: PackageDecl?,
     val summons: List<SummonDecl>,
     val items: List<Stmt>,
     override val line: Int = 1,
     override val col: Int = 1,
 ) : Node
 
-data class HoodDecl(val path: String, override val line: Int, override val col: Int) : Node
+data class PackageDecl(val path: String, override val line: Int, override val col: Int) : Node
 
 data class SummonDecl(
     val path: String,
@@ -48,7 +48,7 @@ data class Param(
     override val col: Int,
 ) : Node
 
-/** `bet ... periodt`. [endLine] is the periodt line, where `}` is emitted. */
+/** `{ ... }`. [endLine] is the closing-brace line, where `}` is emitted. */
 data class Block(
     val stmts: List<Stmt>,
     override val line: Int,
@@ -68,8 +68,8 @@ data class FunDecl(
     val body: Block?,
     override val line: Int,
     override val col: Int,
-    val gatekeep: Boolean = false,
-    val remix: Boolean = false,
+    val isPrivate: Boolean = false,
+    val isOverride: Boolean = false,
 ) : Stmt
 
 data class VarDecl(
@@ -79,16 +79,16 @@ data class VarDecl(
     val init: Expr,
     override val line: Int,
     override val col: Int,
-    val gatekeep: Boolean = false,
+    val isPrivate: Boolean = false,
 ) : Stmt
 
 // ---- OOP ---------------------------------------------------------------------
 
-enum class CtorParamKind { PLAIN, RIZZ, GYATT }
+enum class CtorParamKind { PLAIN, ALPHA, BETA }
 
 data class CtorParam(
     val kind: CtorParamKind,
-    val gatekeep: Boolean,
+    val isPrivate: Boolean,
     val name: String,
     val type: TypeRef,
     override val line: Int,
@@ -102,8 +102,8 @@ data class SuperRef(
     override val col: Int,
 ) : Node
 
-/** `sigma Dog(rizz name: lore) is a Animal vibes with Fetchable bet ... periodt` */
-data class SigmaDecl(
+/** `class Dog(alpha name: lore) is a Animal vibes with Fetchable { ... }` */
+data class ClassDecl(
     val name: String,
     val ctorParams: List<CtorParam>,
     val superRef: SuperRef?,
@@ -114,7 +114,7 @@ data class SigmaDecl(
     override val col: Int,
 ) : Stmt
 
-/** `npc Config bet ... periodt` - a singleton. */
+/** `npc Config { ... }` - a singleton. */
 data class NpcDecl(
     val name: String,
     val members: List<Stmt>,
@@ -123,7 +123,7 @@ data class NpcDecl(
     override val col: Int,
 ) : Stmt
 
-/** `vibe Fetchable bet ... periodt` - an interface. */
+/** `vibe Fetchable { ... }` - an interface. */
 data class VibeDecl(
     val name: String,
     val members: List<Stmt>,
@@ -134,24 +134,24 @@ data class VibeDecl(
 
 // ---- control flow ---------------------------------------------------------------
 
-/** One `values -> body` arm; [values] null means the `bruh ->` default arm. */
-data class VcBranch(
+/** One `values -> body` arm; [values] null means the `else ->` default arm. */
+data class WhenBranch(
     val values: List<Expr>?,
     val body: Block,
     override val line: Int,
     override val col: Int,
 ) : Node
 
-/** `vibecheck (x) bet ... periodt` - when/switch. */
-data class VibecheckStmt(
+/** `when (x) { ... }` - when/switch. */
+data class WhenStmt(
     val subject: Expr,
-    val branches: List<VcBranch>,
+    val branches: List<WhenBranch>,
     val endLine: Int,
     override val line: Int,
     override val col: Int,
 ) : Stmt
 
-/** `mog (item inside things) bet ... periodt` - for-in. */
+/** `mog (item inside things) { ... }` - for-in. */
 data class MogStmt(
     val varName: String,
     val iterable: Expr,
@@ -160,8 +160,8 @@ data class MogStmt(
     override val col: Int,
 ) : Stmt
 
-/** `finna bet ... caught in 4k (oops) bet ... periodt` - try/catch. */
-data class FinnaStmt(
+/** `try { ... catch (oops) { ... }` - try/catch. */
+data class TryStmt(
     val tryBlock: Block,
     val catchName: String,
     val catchBlock: Block,
@@ -186,8 +186,8 @@ data class Assign(
     override val col: Int,
 ) : Stmt
 
-/** `sus (cond) bet ... periodt [bruh ...]`; [elseBranch] is a Block or a SusStmt. */
-data class SusStmt(
+/** `if (cond) { ... } [else ...]`; [elseBranch] is a Block or an IfStmt. */
+data class IfStmt(
     val cond: Expr,
     val thenBlock: Block,
     val elseBranch: Node?,
@@ -210,7 +210,7 @@ data class SkipStmt(override val line: Int, override val col: Int) : Stmt
 
 data class ExprStmt(val expr: Expr, override val line: Int, override val col: Int) : Stmt
 
-/** `drop site on <port> bet ... periodt` - the one dedicated web statement. */
+/** `drop site on <port> { ... }` - the one dedicated web statement. */
 data class DropSiteStmt(
     val port: Expr,
     val block: Block,
@@ -225,11 +225,11 @@ sealed interface Expr : Node
 data class IntLit(val text: String, override val line: Int, override val col: Int) : Expr
 data class DoubleLit(val text: String, override val line: Int, override val col: Int) : Expr
 data class BoolLit(val value: Boolean, override val line: Int, override val col: Int) : Expr
-data class GhostedLit(override val line: Int, override val col: Int) : Expr
+data class NullLit(override val line: Int, override val col: Int) : Expr
 data class NameRef(val name: String, override val line: Int, override val col: Int) : Expr
 
-/** `me` - this. */
-data class MeRef(override val line: Int, override val col: Int) : Expr
+/** `this`. */
+data class ThisRef(override val line: Int, override val col: Int) : Expr
 
 /** `xs[i]` - indexing. */
 data class IndexExpr(
@@ -250,7 +250,7 @@ data class StringTmpl(
     override val col: Int,
 ) : Expr
 
-/** [lambda] is the trailing block: `page("/") bet ... periodt` → `page("/") { ... }`. */
+/** [lambda] is the trailing block: `page("/") { ... }` → `page("/") { ... }`. */
 data class Call(
     val callee: Expr,
     val args: List<Expr>,
@@ -269,7 +269,7 @@ data class MemberAccess(
 
 enum class BinOp(val kotlin: String) {
     ADD("+"), SUB("-"), MUL("*"), DIV("/"), MOD("%"),
-    TWINS("=="), AINT("!="), CLEARS(">"), FLOPS("<"), ATLEAST(">="), ATMOST("<="),
+    IS("=="), AINT("!="), GT(">"), LT("<"), ATLEAST(">="), ATMOST("<="),
     AND("&&"), OR("||"), THROUGH(".."), OTHERWISE("?:"),
 }
 
@@ -290,5 +290,5 @@ data class Unary(
     override val col: Int,
 ) : Expr
 
-/** postfix `deadass` - emitted as a runtime `.deadass()` call so the NPE roast is ours. */
-data class DeadassExpr(val operand: Expr, override val line: Int, override val col: Int) : Expr
+/** postfix `deadahh` - emitted as a runtime `.deadahh()` call so the NPE message is ours. */
+data class DeadahhExpr(val operand: Expr, override val line: Int, override val col: Int) : Expr

@@ -3,7 +3,7 @@ package rotlin.compiler
 /** Compact s-expression rendering of the AST for snapshot-style assertions. */
 fun Node.sexp(): String = when (this) {
     is Program -> items.joinToString(" ") { it.sexp() }
-    is HoodDecl -> "(hood $path)"
+    is PackageDecl -> "(package $path)"
     is SummonDecl -> "(summon $path${if (wildcard) ".*" else ""})"
     is Param -> "$name: ${type.sexp()}"
     is TypeRef.Named -> if (args.isEmpty()) name else "$name<${args.joinToString(", ") { it.sexp() }}>"
@@ -11,23 +11,23 @@ fun Node.sexp(): String = when (this) {
     is Block -> "{${stmts.joinToString("; ") { it.sexp() }}}"
     is FunDecl -> buildString {
         append("(")
-        if (gatekeep) append("gatekeep ")
-        if (remix) append("remix ")
+        if (isPrivate) append("private ")
+        if (isOverride) append("override ")
         append("fun $name (${params.joinToString(", ") { it.sexp() }})")
         returnType?.let { append(": ${it.sexp()}") }
         body?.let { append(" ${it.sexp()}") }
         append(")")
     }
-    is SigmaDecl -> buildString {
-        append("(sigma $name")
+    is ClassDecl -> buildString {
+        append("(class $name")
         if (ctorParams.isNotEmpty()) {
             append(" (")
             append(ctorParams.joinToString(", ") { p ->
                 buildString {
-                    if (p.gatekeep) append("gatekeep ")
+                    if (p.isPrivate) append("private ")
                     when (p.kind) {
-                        CtorParamKind.RIZZ -> append("val ")
-                        CtorParamKind.GYATT -> append("var ")
+                        CtorParamKind.ALPHA -> append("val ")
+                        CtorParamKind.BETA -> append("var ")
                         CtorParamKind.PLAIN -> {}
                     }
                     append("${p.name}: ${p.type.sexp()}")
@@ -41,7 +41,7 @@ fun Node.sexp(): String = when (this) {
     }
     is NpcDecl -> "(npc $name {${members.joinToString("; ") { it.sexp() }}})"
     is VibeDecl -> "(vibe $name {${members.joinToString("; ") { it.sexp() }}})"
-    is VibecheckStmt -> buildString {
+    is WhenStmt -> buildString {
         append("(when ${subject.sexp()}")
         for (b in branches) {
             append(" [")
@@ -51,17 +51,17 @@ fun Node.sexp(): String = when (this) {
         append(")")
     }
     is MogStmt -> "(for $varName in ${iterable.sexp()} ${body.sexp()})"
-    is FinnaStmt -> "(try ${tryBlock.sexp()} catch $catchName ${catchBlock.sexp()})"
+    is TryStmt -> "(try ${tryBlock.sexp()} catch $catchName ${catchBlock.sexp()})"
     is CrashoutStmt -> "(throw ${value.sexp()})"
     is VarDecl -> buildString {
         append("(")
-        if (gatekeep) append("gatekeep ")
+        if (isPrivate) append("private ")
         append("${if (mutable) "var" else "val"} $name")
         declaredType?.let { append(": ${it.sexp()}") }
         append(" ${init.sexp()})")
     }
     is Assign -> "(${op.kotlin} ${target.sexp()} ${value.sexp()})"
-    is SusStmt -> buildString {
+    is IfStmt -> buildString {
         append("(if ${cond.sexp()} ${thenBlock.sexp()}")
         elseBranch?.let { append(" else ${it.sexp()}") }
         append(")")
@@ -75,9 +75,9 @@ fun Node.sexp(): String = when (this) {
     is IntLit -> text
     is DoubleLit -> text
     is BoolLit -> value.toString()
-    is GhostedLit -> "null"
+    is NullLit -> "null"
     is NameRef -> name
-    is MeRef -> "me"
+    is ThisRef -> "this"
     is IndexExpr -> "([] ${receiver.sexp()} ${index.sexp()})"
     is StringTmpl -> "(str ${parts.joinToString(" ") {
         when (it) {
@@ -89,6 +89,6 @@ fun Node.sexp(): String = when (this) {
     is MemberAccess -> "(${if (safe) "?." else "."} ${receiver.sexp()} $name)"
     is Binary -> "(${op.kotlin} ${left.sexp()} ${right.sexp()})"
     is Unary -> "(${if (op == UnaryOp.NOT) "!" else "neg"} ${operand.sexp()})"
-    is DeadassExpr -> "(deadass ${operand.sexp()})"
-    else -> error("no sexp rendering for $this") // CtorParam/SuperRef/VcBranch render inline
+    is DeadahhExpr -> "(deadahh ${operand.sexp()})"
+    else -> error("no sexp rendering for $this") // CtorParam/SuperRef/WhenBranch render inline
 }

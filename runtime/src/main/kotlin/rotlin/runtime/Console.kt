@@ -7,12 +7,12 @@ fun yap() = println()
 fun yap(x: Any?) = println(x)
 fun whisper(x: Any?) = print(x)
 
-/** Reads a line from the console; ghosted when input ends. */
+/** Reads a line from the console; null when input ends. */
 fun listen(): String? = readLine()
 
-/** Backing for the postfix `deadass` operator (`!!` with a better story). */
-fun <T : Any> T?.deadass(): T =
-    this ?: throw SkillIssue("you said deadass but it was ghosted. caught in 4k.")
+/** Backing for the postfix `deadahh` operator (`!!` with a better story). */
+fun <T : Any> T?.deadahh(): T =
+    this ?: throw SkillIssue("deadahh failed: the value was null.")
 
 // conversions - named after the types they convert INTO
 fun lore(x: Any?): String = x.toString()

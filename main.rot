@@ -1,11 +1,11 @@
-gyatt score = 0
+beta score = 0
 
-drop site on 3000 bet
-    page("/") bet
+drop site on 3000 {
+    page("/") {
         bigyap("AURA CLICKER")
         yap("your aura: $score")
-        smash("+1 aura") does bet
+        smash("+1 aura") does {
             score gains 1
-        periodt
-    periodt
-periodt
+        }
+    }
+}

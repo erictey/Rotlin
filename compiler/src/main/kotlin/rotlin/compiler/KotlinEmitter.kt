@@ -42,10 +42,10 @@ class KotlinEmitter {
         sb.append("@file:JvmName(\"RotMain\")\n")
         currentLine = 2
 
-        if (program.hood != null) {
-            // package must precede imports, so the runtime import rides the hood line
-            padTo(program.hood.line + PRELUDE_LINES)
-            write("package ${program.hood.path}; import rotlin.runtime.*")
+        if (program.pkg != null) {
+            // package must precede imports, so the runtime import rides the package line
+            padTo(program.pkg.line + PRELUDE_LINES)
+            write("package ${program.pkg.path}; import rotlin.runtime.*")
         } else {
             write("import rotlin.runtime.*")
         }
@@ -57,7 +57,7 @@ class KotlinEmitter {
 
         // split: leading declarations stay top-level, rest wraps into main()
         val firstStmtIdx = program.items.indexOfFirst {
-            it !is FunDecl && it !is VarDecl && it !is SigmaDecl && it !is NpcDecl && it !is VibeDecl
+            it !is FunDecl && it !is VarDecl && it !is ClassDecl && it !is NpcDecl && it !is VibeDecl
         }
         val topLevel = if (firstStmtIdx == -1) program.items else program.items.take(firstStmtIdx)
         val mainBody = if (firstStmtIdx == -1) emptyList() else program.items.drop(firstStmtIdx)
@@ -73,7 +73,7 @@ class KotlinEmitter {
         }
 
         sb.append('\n')
-        val fqn = if (program.hood != null) "${program.hood.path}.RotMain" else "RotMain"
+        val fqn = if (program.pkg != null) "${program.pkg.path}.RotMain" else "RotMain"
         return EmitOutput(sb.toString(), LineMap.offset(PRELUDE_LINES), fqn)
     }
 
@@ -108,10 +108,10 @@ class KotlinEmitter {
                 val params = stmt.params.joinToString(", ") { "${escapeName(it.name)}: ${typeText(it.type)}" }
                 val ret = stmt.returnType?.let { ": ${typeText(it)}" } ?: ""
                 val mods = buildString {
-                    if (stmt.gatekeep) append("private ")
+                    if (stmt.isPrivate) append("private ")
                     when {
-                        stmt.remix -> append("override ")
-                        // all-open world: any class method can be remixed by a child
+                        stmt.isOverride -> append("override ")
+                        // all-open world: any class method can be overridden by a child
                         inClass && !inInterface -> append("open ")
                     }
                 }
@@ -124,18 +124,18 @@ class KotlinEmitter {
             is VarDecl -> {
                 anchor(stmt.line + PRELUDE_LINES)
                 val kw = if (stmt.mutable) "var" else "val"
-                val gate = if (stmt.gatekeep) "private " else ""
+                val gate = if (stmt.isPrivate) "private " else ""
                 val typed = stmt.declaredType?.let { ": ${typeText(it)}" } ?: ""
                 write("$gate$kw ${escapeName(stmt.name)}$typed = ${exprText(stmt.init)}")
             }
-            is SigmaDecl -> {
+            is ClassDecl -> {
                 anchor(stmt.line + PRELUDE_LINES)
                 val ctor = if (stmt.ctorParams.isEmpty()) "" else "(" + stmt.ctorParams.joinToString(", ") { p ->
                     buildString {
-                        if (p.gatekeep) append("private ")
+                        if (p.isPrivate) append("private ")
                         when (p.kind) {
-                            CtorParamKind.RIZZ -> append("val ")
-                            CtorParamKind.GYATT -> append("var ")
+                            CtorParamKind.ALPHA -> append("val ")
+                            CtorParamKind.BETA -> append("var ")
                             CtorParamKind.PLAIN -> {}
                         }
                         append("${escapeName(p.name)}: ${typeText(p.type)}")
@@ -175,7 +175,7 @@ class KotlinEmitter {
                 anchor(stmt.endLine + PRELUDE_LINES)
                 write("}")
             }
-            is VibecheckStmt -> {
+            is WhenStmt -> {
                 anchor(stmt.line + PRELUDE_LINES)
                 write("when (${exprText(stmt.subject)}) {")
                 for (b in stmt.branches) {
@@ -200,7 +200,7 @@ class KotlinEmitter {
                 write("for (${escapeName(stmt.varName)} in ${exprText(stmt.iterable)}) {")
                 emitBlockBody(stmt.body)
             }
-            is FinnaStmt -> {
+            is TryStmt -> {
                 anchor(stmt.line + PRELUDE_LINES)
                 write("try {")
                 emitBlockBody(stmt.tryBlock)
@@ -216,7 +216,7 @@ class KotlinEmitter {
                 anchor(stmt.line + PRELUDE_LINES)
                 write("${exprText(stmt.target)} ${stmt.op.kotlin} ${exprText(stmt.value)}")
             }
-            is SusStmt -> emitSus(stmt)
+            is IfStmt -> emitIf(stmt)
             is GrindStmt -> {
                 anchor(stmt.line + PRELUDE_LINES)
                 write("while (${exprText(stmt.cond)}) {")
@@ -247,7 +247,7 @@ class KotlinEmitter {
         }
     }
 
-    private fun emitSus(stmt: SusStmt) {
+    private fun emitIf(stmt: IfStmt) {
         anchor(stmt.line + PRELUDE_LINES)
         write("if (${exprText(stmt.cond)}) {")
         emitBlockBody(stmt.thenBlock)
@@ -258,7 +258,7 @@ class KotlinEmitter {
                 write("else {")
                 emitBlockBody(e)
             }
-            is SusStmt -> {
+            is IfStmt -> {
                 anchor(e.line + PRELUDE_LINES)
                 write("else ")
                 // inline: emit the nested if on this same line
@@ -267,7 +267,7 @@ class KotlinEmitter {
                 when (val e2 = e.elseBranch) {
                     null -> {}
                     is Block -> { anchor(e2.line + PRELUDE_LINES); write("else {"); emitBlockBody(e2) }
-                    is SusStmt -> { anchor(e2.line + PRELUDE_LINES); write("else "); emitSusInline(e2) }
+                    is IfStmt -> { anchor(e2.line + PRELUDE_LINES); write("else "); emitIfInline(e2) }
                     else -> {}
                 }
             }
@@ -275,18 +275,18 @@ class KotlinEmitter {
         }
     }
 
-    private fun emitSusInline(stmt: SusStmt) {
+    private fun emitIfInline(stmt: IfStmt) {
         write("if (${exprText(stmt.cond)}) {")
         emitBlockBody(stmt.thenBlock)
         when (val e = stmt.elseBranch) {
             null -> {}
             is Block -> { anchor(e.line + PRELUDE_LINES); write("else {"); emitBlockBody(e) }
-            is SusStmt -> { anchor(e.line + PRELUDE_LINES); write("else "); emitSusInline(e) }
+            is IfStmt -> { anchor(e.line + PRELUDE_LINES); write("else "); emitIfInline(e) }
             else -> {}
         }
     }
 
-    /** Emits the statements of a block and its closing `}` on the periodt line. */
+    /** Emits the statements of a block and its closing `}` on the closing-brace line. */
     private fun emitBlockBody(block: Block) {
         for (s in block.stmts) emitStmt(s)
         anchor(block.endLine + PRELUDE_LINES)
@@ -326,9 +326,9 @@ class KotlinEmitter {
         is IntLit -> expr.text
         is DoubleLit -> expr.text
         is BoolLit -> expr.value.toString()
-        is GhostedLit -> "null"
+        is NullLit -> "null"
         is NameRef -> escapeName(expr.name)
-        is MeRef -> "this"
+        is ThisRef -> "this"
         is IndexExpr -> "${render(expr.receiver, parenthesize = true)}[${exprText(expr.index)}]"
         is StringTmpl -> buildString {
             append('"')
@@ -347,7 +347,7 @@ class KotlinEmitter {
             else "$base { ${expr.lambda.stmts.joinToString("; ") { flatStmt(it) }} }"
         }
         is MemberAccess -> "${render(expr.receiver, parenthesize = true)}${if (expr.safe) "?." else "."}${escapeName(expr.name)}"
-        is DeadassExpr -> "${render(expr.operand, parenthesize = true)}.deadass()"
+        is DeadahhExpr -> "${render(expr.operand, parenthesize = true)}.deadahh()"
         is Unary -> {
             val text = "${expr.op.kotlin}${render(expr.operand, parenthesize = true)}"
             if (parenthesize) "($text)" else text

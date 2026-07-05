@@ -18,7 +18,7 @@ class CookCommand(private val err: PrintStream = System.err) {
 
     fun run(file: Path): Int {
         if (!Files.exists(file)) {
-            err.println("can't find `$file` - that file is ghosting us")
+            err.println("can't find `$file` - no such file")
             return 1
         }
         val fileName = file.fileName.toString()
@@ -70,8 +70,7 @@ class CookCommand(private val err: PrintStream = System.err) {
             .firstOrNull { it.fileName == "RotMain.kt" }
             ?.let { lineMap.toRotLine(it.lineNumber) }
         val where = rotLine?.let { " at $fileName line $it" } ?: ""
-        val label = if (e is SkillIssue) "SKILL ISSUE" else "SKILL ISSUE (${e.javaClass.simpleName})"
-        err.println("$label$where: ${e.message ?: "no message, just vibes"}")
-        if (e !is SkillIssue) err.println("  (caught in 4k)")
+        val label = if (e is SkillIssue) "runtime error" else "runtime error (${e.javaClass.simpleName})"
+        err.println("$label$where: ${e.message ?: "no message"}")
     }
 }

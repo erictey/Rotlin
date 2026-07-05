@@ -16,38 +16,38 @@ class LexerTest {
     @Test
     fun `keywords map to keyword tokens and other words stay identifiers`() {
         assertEquals(
-            listOf(RIZZ, IDENT, ASSIGN, INT_LIT),
-            types("rizz count = 5"),
+            listOf(ALPHA, IDENT, ASSIGN, INT_LIT),
+            types("alpha count = 5"),
         )
         assertEquals(
-            listOf(GYATT, IDENT, ASSIGN, BASED),
-            types("gyatt cool = based"),
+            listOf(BETA, IDENT, ASSIGN, TRUE),
+            types("beta cool = true"),
         )
     }
 
     @Test
     fun `newlines are tokens and blank lines collapse`() {
-        val toks = lex("rizz a = 1\n\n\nrizz b = 2\n").tokens
+        val toks = lex("alpha a = 1\n\n\nalpha b = 2\n").tokens
         val newlineRuns = toks.count { it.type == NEWLINE }
         assertEquals(2, newlineRuns, "consecutive newlines should collapse: $toks")
     }
 
     @Test
     fun `utf-8 BOM is ignored`() {
-        // Notepad and PowerShell love to prepend BOMs; kids will hit this
-        assertEquals(listOf(RIZZ, IDENT, ASSIGN, INT_LIT), types("﻿rizz a = 1"))
+        // Notepad and PowerShell love to prepend BOMs; users will hit this
+        assertEquals(listOf(ALPHA, IDENT, ASSIGN, INT_LIT), types("﻿alpha a = 1"))
     }
 
     @Test
     fun `crlf and lf lex identically`() {
-        val lf = lex("rizz a = 1\nrizz b = 2\n").tokens.map { it.type }
-        val crlf = lex("rizz a = 1\r\nrizz b = 2\r\n").tokens.map { it.type }
+        val lf = lex("alpha a = 1\nalpha b = 2\n").tokens.map { it.type }
+        val crlf = lex("alpha a = 1\r\nalpha b = 2\r\n").tokens.map { it.type }
         assertEquals(lf, crlf)
     }
 
     @Test
     fun `line and column positions are 1-based and correct`() {
-        val toks = lex("rizz a = 1\nyap(a)\n").tokens
+        val toks = lex("alpha a = 1\nyap(a)\n").tokens
         val yap = toks.first { it.text == "yap" }
         assertEquals(2, yap.line)
         assertEquals(1, yap.col)
@@ -55,17 +55,17 @@ class LexerTest {
 
     @Test
     fun `keywords inside strings and comments never swap`() {
-        val toks = lex("yap(\"skibidi sus bruh\") // rizz gyatt comment\n").tokens
+        val toks = lex("yap(\"tung if else\") // alpha beta comment\n").tokens
         val str = toks.first { it.type == STRING_TMPL }
         val text = (str.parts!!.single() as TmplPart.Text).raw
-        assertEquals("skibidi sus bruh", text)
-        assertTrue(toks.none { it.type == RIZZ || it.type == GYATT || it.type == SUS })
+        assertEquals("tung if else", text)
+        assertTrue(toks.none { it.type == ALPHA || it.type == BETA || it.type == IF })
     }
 
     @Test
     fun `nested block comments are skipped entirely`() {
-        val types = types("rizz a /* outer /* nested skibidi */ still comment */ = 1")
-        assertEquals(listOf(RIZZ, IDENT, ASSIGN, INT_LIT), types)
+        val types = types("alpha a /* outer /* nested tung */ still comment */ = 1")
+        assertEquals(listOf(ALPHA, IDENT, ASSIGN, INT_LIT), types)
     }
 
     @Test
@@ -82,9 +82,9 @@ class LexerTest {
 
     @Test
     fun `string template with braced expression sub-lexes word operators`() {
-        val tok = lex("\"result \${a twins b}\"").tokens.first { it.type == STRING_TMPL }
+        val tok = lex("\"result \${a is b}\"").tokens.first { it.type == STRING_TMPL }
         val interp = tok.parts!!.filterIsInstance<TmplPart.Interp>().single()
-        assertEquals(listOf(IDENT, TWINS, IDENT), interp.tokens.map { it.type })
+        assertEquals(listOf(IDENT, IS, IDENT), interp.tokens.map { it.type })
     }
 
     @Test
@@ -99,30 +99,37 @@ class LexerTest {
         fun bannedSuggestion(src: String): String? =
             lex(src).tokens.firstOrNull { it.type == BANNED }?.suggestion
 
-        assertEquals("twins", bannedSuggestion("a == b"))
+        assertEquals("is", bannedSuggestion("a == b"))
         assertEquals("aint", bannedSuggestion("a != b"))
         assertEquals("atmost", bannedSuggestion("a <= b"))
         assertEquals("atleast", bannedSuggestion("a >= b"))
         assertEquals("and", bannedSuggestion("a && b"))
         assertEquals("or", bannedSuggestion("a || b"))
-        assertEquals("deadass", bannedSuggestion("a!!"))
+        assertEquals("deadahh", bannedSuggestion("a!!"))
         assertEquals("otherwise", bannedSuggestion("a ?: b"))
         assertEquals("not", bannedSuggestion("!a"))
-        assertEquals("bet", bannedSuggestion("{"))
-        assertEquals("periodt", bannedSuggestion("}"))
+    }
+
+    @Test
+    fun `braces lex as legal block tokens`() {
+        assertEquals(listOf(LBRACE, IDENT, RBRACE), types("{ x }"))
     }
 
     @Test
     fun `semicolons are banned with a one-statement-per-line hint`() {
-        val tok = lex("rizz a = 1; rizz b = 2").tokens.first { it.type == BANNED }
+        val tok = lex("alpha a = 1; alpha b = 2").tokens.first { it.type == BANNED }
         assertEquals(";", tok.text)
     }
 
     @Test
-    fun `lt and gt are legal tokens for generics`() {
+    fun `lt and gt are legal tokens`() {
         assertEquals(
             listOf(IDENT, LT, IDENT, GT),
             types("squad<aura>"),
+        )
+        assertEquals(
+            listOf(IDENT, LT, INT_LIT),
+            types("a < 3"),
         )
     }
 
@@ -135,22 +142,32 @@ class LexerTest {
 
     @Test
     fun `multi word phrases fuse into single tokens`() {
-        assertEquals(listOf(SIGMA, IDENT, IS_A, IDENT), types("sigma Dog is a Animal"))
-        assertEquals(listOf(SIGMA, IDENT, IS_A, IDENT), types("sigma Dog is an Animal"))
+        assertEquals(listOf(CLASS, IDENT, IS_A, IDENT), types("class Dog is a Animal"))
+        assertEquals(listOf(CLASS, IDENT, IS_A, IDENT), types("class Dog is an Animal"))
         assertEquals(listOf(IDENT, VIBES_WITH, IDENT), types("Dog vibes with Fetchable"))
-        assertEquals(listOf(CAUGHT_IN_4K, LPAREN, IDENT, RPAREN), types("caught in 4k (oops)"))
+    }
+
+    @Test
+    fun `is on its own lexes as the equality keyword`() {
+        assertEquals(listOf(IDENT, IS, IDENT), types("a is b"))
+        assertEquals(listOf(IDENT, IS, INT_LIT), types("x is 5"))
+    }
+
+    @Test
+    fun `catch is a single-word keyword`() {
+        assertEquals(listOf(CATCH, LPAREN, IDENT, RPAREN), types("catch (oops)"))
     }
 
     @Test
     fun `phrase tail words stay usable as plain identifiers`() {
-        assertEquals(listOf(RIZZ, IDENT, ASSIGN, INT_LIT), types("rizz a = 1"))
-        assertEquals(listOf(RIZZ, IDENT, ASSIGN, INT_LIT), types("rizz with = 2"))
-        assertEquals(listOf(RIZZ, IDENT, ASSIGN, INT_LIT), types("rizz an = 3"))
+        assertEquals(listOf(ALPHA, IDENT, ASSIGN, INT_LIT), types("alpha a = 1"))
+        assertEquals(listOf(ALPHA, IDENT, ASSIGN, INT_LIT), types("alpha with = 2"))
+        assertEquals(listOf(ALPHA, IDENT, ASSIGN, INT_LIT), types("alpha an = 3"))
     }
 
     @Test
     fun `broken phrase head produces a diagnostic with did-you-mean`() {
-        val result = lex("rizz vibes = 1")
+        val result = lex("alpha vibes = 1")
         assertTrue(result.diagnostics.hasErrors)
         val diag = result.diagnostics.all.first()
         assertTrue(diag.hint!!.contains("vibes with"), "hint was: ${diag.hint}")

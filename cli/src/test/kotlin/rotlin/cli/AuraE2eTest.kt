@@ -24,14 +24,14 @@ class AuraE2eTest {
         val (code, out) = aura("yap(nope)\nyap(alsonope)\n")
         assertEquals(1, code)
         assertContains(out, "800 / 1000")
-        assertContains(out, "who is `nope`??")
+        assertContains(out, "unresolved reference: `nope`")
     }
 
     @Test
-    fun `clean file gets the full W`() {
-        val (code, out) = aura("rizz name = \"chat\"\nyap(\"sup \" + name)\n")
+    fun `clean file gets the full score`() {
+        val (code, out) = aura("alpha name = \"chat\"\nyap(\"sup \" + name)\n")
         assertEquals(0, code)
         assertContains(out, "+1000 aura")
-        assertContains(out, "no cap")
+        assertContains(out, "no errors")
     }
 }

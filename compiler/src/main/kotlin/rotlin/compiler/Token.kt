@@ -2,17 +2,18 @@ package rotlin.compiler
 
 enum class TokenType {
     // single-word keywords
-    SKIBIDI, RIZZ, GYATT, YEET, SIGMA, NPC, SUS, BRUH, GRIND, MOG, VIBECHECK,
-    INSIDE, BASED, CRINGE, GHOSTED, SUMMON, HOOD, BET, PERIODT, SPITS, MAYBE,
-    OTHERWISE, DEADASS, GAINS, LOSES, DIP, SKIP, AND, OR, NOT,
-    TWINS, AINT, CLEARS, FLOPS, ATLEAST, ATMOST, THROUGH,
-    VIBE, REMIX, GATEKEEP, ME, CRASHOUT, FINNA, DOES, DROP,
+    TUNG, ALPHA, BETA, YEET, CLASS, NPC, IF, ELSE, GRIND, MOG, WHEN,
+    INSIDE, TRUE, FALSE, NULL, SUMMON, PACKAGE, SPITS, MAYBE,
+    OTHERWISE, DEADAHH, GAINS, LOSES, DIP, SKIP, AND, OR, NOT,
+    IS, AINT, ATLEAST, ATMOST, THROUGH,
+    VIBE, OVERRIDE, PRIVATE, THIS, CRASHOUT, TRY, CATCH, DOES, DROP,
 
     // multi-word phrases (fused by the lexer)
-    IS_A, VIBES_WITH, CAUGHT_IN_4K,
+    IS_A, VIBES_WITH,
 
     // punctuation
     LPAREN, RPAREN, COMMA, COLON, DOT, SAFE_DOT, LBRACKET, RBRACKET,
+    LBRACE, RBRACE,
     LT, GT, ASSIGN, ARROW, PLUS, MINUS, STAR, SLASH, PERCENT,
 
     // literals
@@ -42,29 +43,27 @@ data class Token(
 )
 
 val KEYWORDS: Map<String, TokenType> = mapOf(
-    "skibidi" to TokenType.SKIBIDI,
-    "rizz" to TokenType.RIZZ,
-    "gyatt" to TokenType.GYATT,
+    "tung" to TokenType.TUNG,
+    "alpha" to TokenType.ALPHA,
+    "beta" to TokenType.BETA,
     "yeet" to TokenType.YEET,
-    "sigma" to TokenType.SIGMA,
+    "class" to TokenType.CLASS,
     "npc" to TokenType.NPC,
-    "sus" to TokenType.SUS,
-    "bruh" to TokenType.BRUH,
+    "if" to TokenType.IF,
+    "else" to TokenType.ELSE,
     "grind" to TokenType.GRIND,
     "mog" to TokenType.MOG,
-    "vibecheck" to TokenType.VIBECHECK,
+    "when" to TokenType.WHEN,
     "inside" to TokenType.INSIDE,
-    "based" to TokenType.BASED,
-    "cringe" to TokenType.CRINGE,
-    "ghosted" to TokenType.GHOSTED,
+    "true" to TokenType.TRUE,
+    "false" to TokenType.FALSE,
+    "null" to TokenType.NULL,
     "summon" to TokenType.SUMMON,
-    "hood" to TokenType.HOOD,
-    "bet" to TokenType.BET,
-    "periodt" to TokenType.PERIODT,
+    "package" to TokenType.PACKAGE,
     "spits" to TokenType.SPITS,
     "maybe" to TokenType.MAYBE,
     "otherwise" to TokenType.OTHERWISE,
-    "deadass" to TokenType.DEADASS,
+    "deadahh" to TokenType.DEADAHH,
     "gains" to TokenType.GAINS,
     "loses" to TokenType.LOSES,
     "dip" to TokenType.DIP,
@@ -72,26 +71,23 @@ val KEYWORDS: Map<String, TokenType> = mapOf(
     "and" to TokenType.AND,
     "or" to TokenType.OR,
     "not" to TokenType.NOT,
-    "twins" to TokenType.TWINS,
+    "is" to TokenType.IS,
     "aint" to TokenType.AINT,
-    "clears" to TokenType.CLEARS,
-    "flops" to TokenType.FLOPS,
     "atleast" to TokenType.ATLEAST,
     "atmost" to TokenType.ATMOST,
     "through" to TokenType.THROUGH,
     "vibe" to TokenType.VIBE,
-    "remix" to TokenType.REMIX,
-    "gatekeep" to TokenType.GATEKEEP,
-    "me" to TokenType.ME,
+    "override" to TokenType.OVERRIDE,
+    "private" to TokenType.PRIVATE,
+    "this" to TokenType.THIS,
     "crashout" to TokenType.CRASHOUT,
-    "finna" to TokenType.FINNA,
+    "try" to TokenType.TRY,
+    "catch" to TokenType.CATCH,
     "does" to TokenType.DOES,
     "drop" to TokenType.DROP,
 )
 
 /** Words that can start a multi-word phrase; reserved on their own. */
 val PHRASE_HEADS: Map<String, String> = mapOf(
-    "is" to "is a",
     "vibes" to "vibes with",
-    "caught" to "caught in 4k",
 )

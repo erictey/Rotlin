@@ -29,17 +29,17 @@ class DropE2eTest {
     }
 
     private fun clickerSrc(title: String) = """
-        gyatt score = 0
+        beta score = 0
 
-        drop site on 0 bet
-            page("/") bet
+        drop site on 0 {
+            page("/") {
                 bigyap("$title")
                 yap("aura: ${'$'}score")
-                smash("+1") does bet
+                smash("+1") does {
                     score gains 1
-                periodt
-            periodt
-        periodt
+                }
+            }
+        }
     """.trimIndent()
 
     private fun awaitPort(timeoutMs: Long = 120_000): Int {
@@ -108,8 +108,8 @@ class DropE2eTest {
         val reloaded = awaitBody(client, "$base/", "GLOW UP")
         assertContains(reloaded, "aura: 0") // reload = fresh vibes
 
-        // 5. save a broken version -> roast event, old site stays alive
-        file.writeText("rizz = broken\n")
+        // 5. save a broken version -> error event, old site stays alive
+        file.writeText("alpha = broken\n")
         awaitEvent(events, "event: aura")
         val stillUp = awaitBody(client, "$base/", "GLOW UP")
         assertContains(stillUp, "GLOW UP")

@@ -8,7 +8,7 @@ import rotlin.compiler.TokenType.*
  * code keeps identical semantics.
  *
  * BANNED tokens from the lexer are normalized up front: each produces one
- * diagnostic and is replaced by the token the kid clearly meant, so parsing
+ * diagnostic and is replaced by the token that was clearly meant, so parsing
  * recovers with maximum signal.
  */
 class Parser(rawTokens: List<Token>, private val diags: DiagnosticBag) {
@@ -20,9 +20,9 @@ class Parser(rawTokens: List<Token>, private val diags: DiagnosticBag) {
     private companion object {
         const val MAX_ERRORS = 20
         val BANNED_REPLACEMENTS: Map<String, TokenType> = mapOf(
-            "twins" to TWINS, "aint" to AINT, "atmost" to ATMOST, "atleast" to ATLEAST,
-            "and" to AND, "or" to OR, "deadass" to DEADASS, "otherwise" to OTHERWISE,
-            "not" to NOT, "bet" to BET, "periodt" to PERIODT,
+            "is" to IS, "aint" to AINT, "atmost" to ATMOST, "atleast" to ATLEAST,
+            "and" to AND, "or" to OR, "deadahh" to DEADAHH, "otherwise" to OTHERWISE,
+            "not" to NOT,
         )
     }
 
@@ -33,19 +33,19 @@ class Parser(rawTokens: List<Token>, private val diags: DiagnosticBag) {
             val suggestion = t.suggestion ?: "something else"
             when {
                 t.text == ";" -> {
-                    diags.error("E_SEMICOLON", "no semicolons in the hood", t.line, t.col,
+                    diags.error("E_SEMICOLON", "semicolons are not used in Rotlin", t.line, t.col,
                         hint = "one statement per line - just press enter")
                     if (out.isNotEmpty() && out.last().type != NEWLINE) {
                         out += Token(NEWLINE, "\\n", t.line, t.col)
                     }
                 }
                 BANNED_REPLACEMENTS.containsKey(suggestion) -> {
-                    diags.error("E_BANNED_SYMBOL", "`${t.text}` is not a thing here, that's so 2020",
+                    diags.error("E_BANNED_SYMBOL", "`${t.text}` is not valid Rotlin syntax",
                         t.line, t.col, hint = "write `$suggestion` instead")
                     out += Token(BANNED_REPLACEMENTS.getValue(suggestion), suggestion, t.line, t.col)
                 }
                 else -> {
-                    diags.error("E_BANNED_SYMBOL", "`${t.text}` is not Rotlin", t.line, t.col,
+                    diags.error("E_BANNED_SYMBOL", "`${t.text}` is not valid Rotlin syntax", t.line, t.col,
                         hint = "did you mean `$suggestion`?")
                 }
             }
@@ -77,7 +77,7 @@ class Parser(rawTokens: List<Token>, private val diags: DiagnosticBag) {
             diags.error(code, message, at.line, at.col, hint)
             errorCount++
             if (errorCount == MAX_ERRORS) {
-                diags.error("E_COOKED", "your code is COOKED - fix the first few and run it back",
+                diags.error("E_TOO_MANY_ERRORS", "too many errors - fix the first few and recompile",
                     at.line, at.col)
             }
         }
@@ -87,11 +87,11 @@ class Parser(rawTokens: List<Token>, private val diags: DiagnosticBag) {
         while (at(NEWLINE)) advance()
     }
 
-    /** Consumes end-of-statement: a newline, or lets `periodt`/EOF terminate. */
+    /** Consumes end-of-statement: a newline, or lets `}`/EOF terminate. */
     private fun expectStmtEnd() {
         when {
             at(NEWLINE) -> advance()
-            at(PERIODT) || at(EOF) || at(BRUH) -> {}
+            at(RBRACE) || at(EOF) || at(ELSE) -> {}
             else -> {
                 error("E_STMT_END", "one statement per line - `${describe(peek())}` doesn't belong here",
                     peek(), hint = "press enter and put it on its own line")
@@ -101,7 +101,7 @@ class Parser(rawTokens: List<Token>, private val diags: DiagnosticBag) {
     }
 
     private fun synchronize() {
-        while (!at(NEWLINE) && !at(EOF) && !at(PERIODT)) advance()
+        while (!at(NEWLINE) && !at(EOF) && !at(RBRACE)) advance()
         if (at(NEWLINE)) advance()
     }
 
@@ -110,11 +110,11 @@ class Parser(rawTokens: List<Token>, private val diags: DiagnosticBag) {
     fun parseProgram(): Program {
         skipNewlines()
 
-        var hood: HoodDecl? = null
-        if (at(HOOD)) {
+        var pkg: PackageDecl? = null
+        if (at(PACKAGE)) {
             val t = advance()
             val path = parseDottedPath()
-            hood = HoodDecl(path.first, t.line, t.col)
+            pkg = PackageDecl(path.first, t.line, t.col)
             expectStmtEnd(); skipNewlines()
         }
 
@@ -137,7 +137,7 @@ class Parser(rawTokens: List<Token>, private val diags: DiagnosticBag) {
             }
             skipNewlines()
         }
-        return Program(hood, summons, items)
+        return Program(pkg, summons, items)
     }
 
     private fun parseDottedPath(): Pair<String, Boolean> {
@@ -160,23 +160,23 @@ class Parser(rawTokens: List<Token>, private val diags: DiagnosticBag) {
     private fun parseStmt(): Stmt? {
         skipNewlines()
         return when (peek().type) {
-            SKIBIDI -> parseFunDecl()
-            RIZZ, GYATT -> parseVarDecl()
-            SUS -> parseSus()
+            TUNG -> parseFunDecl()
+            ALPHA, BETA -> parseVarDecl()
+            IF -> parseIf()
             GRIND -> parseGrind()
             YEET -> parseYeet()
             DIP -> advance().let { val s = DipStmt(it.line, it.col); expectStmtEnd(); s }
             SKIP -> advance().let { val s = SkipStmt(it.line, it.col); expectStmtEnd(); s }
             DROP -> parseDropSite()
-            SIGMA -> parseSigma()
+            CLASS -> parseClass()
             NPC -> parseNpc()
             VIBE -> parseVibe()
-            VIBECHECK -> parseVibecheck()
+            WHEN -> parseWhen()
             MOG -> parseMog()
-            FINNA -> parseFinna()
+            TRY -> parseTry()
             CRASHOUT -> parseCrashout()
-            GATEKEEP, REMIX -> {
-                error("E_MODIFIER_NOWHERE", "`${peek().text}` only makes sense inside a sigma/npc/vibe",
+            PRIVATE, OVERRIDE -> {
+                error("E_MODIFIER_NOWHERE", "`${peek().text}` only makes sense inside a class/npc/vibe",
                     peek(), hint = "move this into a class body")
                 synchronize(); null
             }
@@ -191,68 +191,68 @@ class Parser(rawTokens: List<Token>, private val diags: DiagnosticBag) {
     }
 
     private fun parseFunDecl(
-        gatekeep: Boolean = false,
-        remix: Boolean = false,
+        isPrivate: Boolean = false,
+        isOverride: Boolean = false,
         allowNoBody: Boolean = false,
     ): Stmt? {
         val kw = advance()
-        val name = expect(IDENT, "a function name after `skibidi`") ?: run { synchronize(); return null }
+        val name = expect(IDENT, "a function name after `tung`") ?: run { synchronize(); return null }
         expect(LPAREN, "`(` after the function name") ?: run { synchronize(); return null }
         val params = mutableListOf<Param>()
         skipNewlines()
         while (!at(RPAREN) && !at(EOF)) {
             val pname = expect(IDENT, "a parameter name") ?: break
-            expect(COLON, "`:` and a type after `${pname.text}` (params need types, no cap)") ?: break
+            expect(COLON, "`:` and a type after `${pname.text}` (parameters need explicit types)") ?: break
             val ptype = parseType() ?: break
             params += Param(pname.text, ptype, pname.line, pname.col)
             if (at(COMMA)) { advance(); skipNewlines() } else break
         }
         expect(RPAREN, "`)` to close the parameter list")
         val returnType = if (at(SPITS)) { advance(); parseType() } else null
-        if (allowNoBody && !at(BET)) {
+        if (allowNoBody && !at(LBRACE)) {
             expectStmtEnd()
-            return FunDecl(name.text, params, returnType, null, kw.line, kw.col, gatekeep, remix)
+            return FunDecl(name.text, params, returnType, null, kw.line, kw.col, isPrivate, isOverride)
         }
         val body = parseBlock() ?: return null
-        return FunDecl(name.text, params, returnType, body, kw.line, kw.col, gatekeep, remix)
+        return FunDecl(name.text, params, returnType, body, kw.line, kw.col, isPrivate, isOverride)
     }
 
-    private fun parseVarDecl(gatekeep: Boolean = false): Stmt? {
+    private fun parseVarDecl(isPrivate: Boolean = false): Stmt? {
         val kw = advance()
-        val mutable = kw.type == GYATT
+        val mutable = kw.type == BETA
         val name = expect(IDENT, "a name after `${kw.text}`") ?: run { synchronize(); return null }
         var declared: TypeRef? = null
         if (at(COLON)) { advance(); declared = parseType() }
-        expect(ASSIGN, "`=` and a starting value (every ${kw.text} needs one)") ?: run { synchronize(); return null }
+        expect(ASSIGN, "`=` and an initial value (every ${kw.text} needs one)") ?: run { synchronize(); return null }
         val init = parseExpression() ?: run { synchronize(); return null }
         expectStmtEnd()
-        return VarDecl(mutable, name.text, declared, init, kw.line, kw.col, gatekeep)
+        return VarDecl(mutable, name.text, declared, init, kw.line, kw.col, isPrivate)
     }
 
     // ---- oop ---------------------------------------------------------------
 
-    private fun parseSigma(): Stmt? {
+    private fun parseClass(): Stmt? {
         val kw = advance()
-        val name = expect(IDENT, "a name after `sigma`") ?: run { synchronize(); return null }
+        val name = expect(IDENT, "a name after `class`") ?: run { synchronize(); return null }
 
         val ctorParams = mutableListOf<CtorParam>()
         if (at(LPAREN)) {
             advance(); skipNewlines()
             while (!at(RPAREN) && !at(EOF)) {
-                var gk = false
+                var priv = false
                 var kind = CtorParamKind.PLAIN
                 loop@ while (true) {
                     when (peek().type) {
-                        GATEKEEP -> { advance(); gk = true }
-                        RIZZ -> { advance(); kind = CtorParamKind.RIZZ }
-                        GYATT -> { advance(); kind = CtorParamKind.GYATT }
+                        PRIVATE -> { advance(); priv = true }
+                        ALPHA -> { advance(); kind = CtorParamKind.ALPHA }
+                        BETA -> { advance(); kind = CtorParamKind.BETA }
                         else -> break@loop
                     }
                 }
                 val pn = expect(IDENT, "a constructor parameter name") ?: break
                 expect(COLON, "`:` and a type for `${pn.text}`") ?: break
                 val pt = parseType() ?: break
-                ctorParams += CtorParam(kind, gk, pn.text, pt, pn.line, pn.col)
+                ctorParams += CtorParam(kind, priv, pn.text, pt, pn.line, pn.col)
                 skipNewlines()
                 if (at(COMMA)) { advance(); skipNewlines() } else break
             }
@@ -284,8 +284,8 @@ class Parser(rawTokens: List<Token>, private val diags: DiagnosticBag) {
             }
         }
 
-        val (members, endLine) = parseMemberBlock("sigma ${name.text}") ?: return null
-        return SigmaDecl(name.text, ctorParams, superRef, vibes, members, endLine, kw.line, kw.col)
+        val (members, endLine) = parseMemberBlock("class ${name.text}") ?: return null
+        return ClassDecl(name.text, ctorParams, superRef, vibes, members, endLine, kw.line, kw.col)
     }
 
     private fun parseNpc(): Stmt? {
@@ -302,57 +302,57 @@ class Parser(rawTokens: List<Token>, private val diags: DiagnosticBag) {
         return VibeDecl(name.text, members, endLine, kw.line, kw.col)
     }
 
-    /** Parses `bet ... periodt` allowing only rizz/gyatt/skibidi members (with modifiers). */
+    /** Parses `{ ... }` allowing only alpha/beta/tung members (with modifiers). */
     private fun parseMemberBlock(owner: String, allowAbstract: Boolean = false): Pair<List<Stmt>, Int>? {
         skipNewlines()
-        val bet = expect(BET, "`bet` to open $owner") ?: run { synchronize(); return null }
+        val lbrace = expect(LBRACE, "`{` to open $owner") ?: run { synchronize(); return null }
         val members = mutableListOf<Stmt>()
         while (true) {
             skipNewlines()
-            if (at(PERIODT)) break
+            if (at(RBRACE)) break
             if (at(EOF)) {
-                error("E_UNCLOSED_BLOCK", "$owner never got its `periodt`", bet,
-                    hint = "close it with `periodt`")
+                error("E_UNCLOSED_BLOCK", "$owner is missing its closing `}`", lbrace,
+                    hint = "close it with `}`")
                 return members to peek().line
             }
-            var gk = false
-            var rx = false
-            while (at(GATEKEEP) || at(REMIX)) {
-                if (at(GATEKEEP)) gk = true else rx = true
+            var priv = false
+            var over = false
+            while (at(PRIVATE) || at(OVERRIDE)) {
+                if (at(PRIVATE)) priv = true else over = true
                 advance()
             }
             when (peek().type) {
-                RIZZ, GYATT -> parseVarDecl(gatekeep = gk)?.let { members += it }
-                SKIBIDI -> parseFunDecl(gatekeep = gk, remix = rx, allowNoBody = allowAbstract)?.let { members += it }
+                ALPHA, BETA -> parseVarDecl(isPrivate = priv)?.let { members += it }
+                TUNG -> parseFunDecl(isPrivate = priv, isOverride = over, allowNoBody = allowAbstract)?.let { members += it }
                 else -> {
-                    error("E_CLASS_MEMBER", "only rizz, gyatt and skibidi live inside $owner", peek(),
-                        hint = "put other code inside a skibidi method")
+                    error("E_CLASS_MEMBER", "only alpha, beta and tung declarations can be members of $owner", peek(),
+                        hint = "put other code inside a tung method")
                     synchronize()
                 }
             }
         }
-        val periodt = advance()
-        return members to periodt.line
+        val rbrace = advance()
+        return members to rbrace.line
     }
 
     // ---- control flow --------------------------------------------------------
 
-    private fun parseVibecheck(): Stmt? {
+    private fun parseWhen(): Stmt? {
         val kw = advance()
-        expect(LPAREN, "`(` after `vibecheck`")
+        expect(LPAREN, "`(` after `when`")
         val subject = parseExpression() ?: run { synchronize(); return null }
         expect(RPAREN, "`)` after the value")
         skipNewlines()
-        expect(BET, "`bet` to open the vibecheck") ?: run { synchronize(); return null }
+        expect(LBRACE, "`{` to open the when") ?: run { synchronize(); return null }
 
-        val branches = mutableListOf<VcBranch>()
+        val branches = mutableListOf<WhenBranch>()
         while (true) {
             skipNewlines()
-            if (at(PERIODT) || at(EOF)) break
+            if (at(RBRACE) || at(EOF)) break
             val startTok = peek()
 
             val values: List<Expr>?
-            if (at(BRUH)) {
+            if (at(ELSE)) {
                 advance()
                 values = null
             } else {
@@ -365,36 +365,36 @@ class Parser(rawTokens: List<Token>, private val diags: DiagnosticBag) {
                 values = vs
             }
             if (expect(ARROW, "`->` after the value(s)") == null) { synchronize(); continue }
-            if (!at(BET) && peek().type in setOf(SUS, GRIND, MOG, VIBECHECK, SIGMA, NPC, VIBE, DROP)) {
-                error("E_BRANCH_BET", "multi-line branches need their own block", peek(),
-                    hint = "write `-> bet` and close with `periodt`")
+            if (!at(LBRACE) && peek().type in setOf(IF, GRIND, MOG, WHEN, CLASS, NPC, VIBE, DROP)) {
+                error("E_BRANCH_BRACE", "multi-line branches need their own block", peek(),
+                    hint = "write `-> {` and close with `}`")
                 synchronize(); continue
             }
-            val body: Block = if (at(BET)) {
+            val body: Block = if (at(LBRACE)) {
                 parseBlock() ?: continue
             } else {
                 val s = parseStmt() ?: continue
                 Block(listOf(s), s.line, s.col, s.line)
             }
-            branches += VcBranch(values, body, startTok.line, startTok.col)
+            branches += WhenBranch(values, body, startTok.line, startTok.col)
         }
-        val endTok = if (at(PERIODT)) advance() else peek()
-        return VibecheckStmt(subject, branches, endTok.line, kw.line, kw.col)
+        val endTok = if (at(RBRACE)) advance() else peek()
+        return WhenStmt(subject, branches, endTok.line, kw.line, kw.col)
     }
 
-    private fun parseFinna(): Stmt? {
+    private fun parseTry(): Stmt? {
         val kw = advance()
-        // `caught in 4k` closes the try block, mirroring how bruh closes sus
-        val tryBlock = parseBlock(stopAtToken = CAUGHT_IN_4K) ?: return null
+        // `catch` may close the try block directly, mirroring how `else` closes an if
+        val tryBlock = parseBlock(stopAtToken = CATCH) ?: return null
         skipNewlines()
-        if (expect(CAUGHT_IN_4K, "`caught in 4k (name)` after the finna block") == null) {
+        if (expect(CATCH, "`catch (name)` after the try block") == null) {
             synchronize(); return null
         }
-        expect(LPAREN, "`(` after `caught in 4k`")
-        val name = expect(IDENT, "a name for what got caught, like `(oops)`") ?: run { synchronize(); return null }
+        expect(LPAREN, "`(` after `catch`")
+        val name = expect(IDENT, "a name for the caught error, like `(oops)`") ?: run { synchronize(); return null }
         expect(RPAREN, "`)` after the name")
         val catchBlock = parseBlock() ?: return null
-        return FinnaStmt(tryBlock, name.text, catchBlock, kw.line, kw.col)
+        return TryStmt(tryBlock, name.text, catchBlock, kw.line, kw.col)
     }
 
     private fun parseCrashout(): Stmt {
@@ -407,7 +407,7 @@ class Parser(rawTokens: List<Token>, private val diags: DiagnosticBag) {
     private fun parseMog(): Stmt? {
         val kw = advance()
         expect(LPAREN, "`(` after `mog`")
-        val v = expect(IDENT, "a loop name - like `mog (item inside things)`") ?: run { synchronize(); return null }
+        val v = expect(IDENT, "a loop variable - like `mog (item inside things)`") ?: run { synchronize(); return null }
         expect(INSIDE, "`inside` after `${v.text}`") ?: run { synchronize(); return null }
         val iterable = parseExpression() ?: run { synchronize(); return null }
         expect(RPAREN, "`)` to close the mog")
@@ -415,37 +415,37 @@ class Parser(rawTokens: List<Token>, private val diags: DiagnosticBag) {
         return MogStmt(v.text, iterable, body, kw.line, kw.col)
     }
 
-    private fun parseSus(): Stmt? {
+    private fun parseIf(): Stmt? {
         val kw = advance()
-        expect(LPAREN, "`(` after `sus`")
+        expect(LPAREN, "`(` after `if`")
         val cond = parseExpression() ?: run { synchronize(); return null }
         expect(RPAREN, "`)` after the condition")
-        // `bruh` may close the then-block directly - no periodt needed before it
-        val thenBlock = parseBlock(stopAtToken = BRUH) ?: return null
+        // `else` may close the then-block directly - no `}` needed before it
+        val thenBlock = parseBlock(stopAtToken = ELSE) ?: return null
 
         var elseBranch: Node? = null
         val save = idx
         skipNewlines()
-        if (at(BRUH)) {
+        if (at(ELSE)) {
             advance()
-            elseBranch = if (at(SUS)) parseSus() else parseBlock()
+            elseBranch = if (at(IF)) parseIf() else parseBlock()
         } else {
             idx = save
         }
-        return SusStmt(cond, thenBlock, elseBranch, kw.line, kw.col)
+        return IfStmt(cond, thenBlock, elseBranch, kw.line, kw.col)
     }
 
     private fun parseDropSite(): Stmt? {
         val kw = advance()
         if (!(at(IDENT) && peek().text == "site")) {
             error("E_DROP_WHAT", "drop what?", peek(),
-                hint = "it goes `drop site on 3000 bet ... periodt`")
+                hint = "it goes `drop site on 3000 { ... }`")
             synchronize(); return null
         }
         advance() // site
         if (!(at(IDENT) && peek().text == "on")) {
             error("E_DROP_WHAT", "where does the site go?", peek(),
-                hint = "it goes `drop site on 3000 bet ... periodt`")
+                hint = "it goes `drop site on 3000 { ... }`")
             synchronize(); return null
         }
         advance() // on
@@ -465,7 +465,7 @@ class Parser(rawTokens: List<Token>, private val diags: DiagnosticBag) {
 
     private fun parseYeet(): Stmt {
         val kw = advance()
-        val value = if (at(NEWLINE) || at(PERIODT) || at(EOF)) null else parseExpression()
+        val value = if (at(NEWLINE) || at(RBRACE) || at(EOF)) null else parseExpression()
         expectStmtEnd()
         return YeetStmt(value, kw.line, kw.col)
     }
@@ -497,27 +497,27 @@ class Parser(rawTokens: List<Token>, private val diags: DiagnosticBag) {
 
     private fun parseBlock(stopAtToken: TokenType? = null): Block? {
         skipNewlines()
-        val bet = expect(BET, "`bet` to open the block") ?: run { synchronize(); return null }
+        val lbrace = expect(LBRACE, "`{` to open the block") ?: run { synchronize(); return null }
         val stmts = mutableListOf<Stmt>()
         while (true) {
             skipNewlines()
             if (stopAtToken != null && at(stopAtToken)) {
-                // bruh / caught in 4k closes this block; caller consumes it
-                return Block(stmts, bet.line, bet.col, peek().line)
+                // else / catch closes this block; caller consumes it
+                return Block(stmts, lbrace.line, lbrace.col, peek().line)
             }
-            if (at(PERIODT)) break
+            if (at(RBRACE)) break
             if (at(EOF)) {
-                error("E_UNCLOSED_BLOCK", "this `bet` never got its `periodt`", bet,
-                    hint = "close the block with `periodt`")
-                return Block(stmts, bet.line, bet.col, peek().line)
+                error("E_UNCLOSED_BLOCK", "this `{` is missing its closing `}`", lbrace,
+                    hint = "close the block with `}`")
+                return Block(stmts, lbrace.line, lbrace.col, peek().line)
             }
             if (errorCount >= MAX_ERRORS) break
             val before = idx
             parseStmt()?.let { stmts += it }
-            if (idx == before && !at(PERIODT) && !at(EOF)) advance() // always make progress
+            if (idx == before && !at(RBRACE) && !at(EOF)) advance() // always make progress
         }
-        val periodt = advance()
-        return Block(stmts, bet.line, bet.col, periodt.line)
+        val rbrace = advance()
+        return Block(stmts, lbrace.line, lbrace.col, rbrace.line)
     }
 
     // ---- types ------------------------------------------------------------
@@ -576,9 +576,9 @@ class Parser(rawTokens: List<Token>, private val diags: DiagnosticBag) {
 
     private fun parseEquality(): Expr? {
         var left = parseComparison() ?: return null
-        while (at(TWINS) || at(AINT)) {
+        while (at(IS) || at(AINT)) {
             val t = advance()
-            val op = if (t.type == TWINS) BinOp.TWINS else BinOp.AINT
+            val op = if (t.type == IS) BinOp.IS else BinOp.AINT
             val right = parseComparison() ?: return left
             left = Binary(op, left, right, t.line, t.col)
         }
@@ -589,20 +589,10 @@ class Parser(rawTokens: List<Token>, private val diags: DiagnosticBag) {
         var left = parseElvis() ?: return null
         while (true) {
             val op = when (peek().type) {
-                CLEARS -> BinOp.CLEARS
-                FLOPS -> BinOp.FLOPS
+                GT -> BinOp.GT
+                LT -> BinOp.LT
                 ATLEAST -> BinOp.ATLEAST
                 ATMOST -> BinOp.ATMOST
-                GT -> {
-                    error("E_BANNED_SYMBOL", "`>` between values is not Rotlin", peek(),
-                        hint = "write `clears` instead")
-                    BinOp.CLEARS
-                }
-                LT -> {
-                    error("E_BANNED_SYMBOL", "`<` between values is not Rotlin", peek(),
-                        hint = "write `flops` instead")
-                    BinOp.FLOPS
-                }
                 else -> return left
             }
             val t = advance()
@@ -685,10 +675,10 @@ class Parser(rawTokens: List<Token>, private val diags: DiagnosticBag) {
                         if (at(COMMA)) { advance(); skipNewlines() } else break
                     }
                     expect(RPAREN, "`)` to close the call")
-                    // trailing lambda: `page("/") bet ... periodt`, `smash("x") does bet ... periodt`
+                    // trailing lambda: `page("/") { ... }`, `smash("x") does { ... }`
                     var lambda: Block? = null
                     if (at(DOES)) { advance(); lambda = parseBlock() }
-                    else if (at(BET)) lambda = parseBlock()
+                    else if (at(LBRACE)) lambda = parseBlock()
                     Call(expr, args, t.line, t.col, lambda)
                 }
                 DOT -> {
@@ -701,9 +691,9 @@ class Parser(rawTokens: List<Token>, private val diags: DiagnosticBag) {
                     val name = expect(IDENT, "a name after `?.`") ?: return expr
                     MemberAccess(expr, name.text, safe = true, t.line, t.col)
                 }
-                DEADASS -> {
+                DEADAHH -> {
                     val t = advance()
-                    DeadassExpr(expr, t.line, t.col)
+                    DeadahhExpr(expr, t.line, t.col)
                 }
                 LBRACKET -> {
                     val t = advance()
@@ -721,10 +711,10 @@ class Parser(rawTokens: List<Token>, private val diags: DiagnosticBag) {
         return when (t.type) {
             INT_LIT -> { advance(); IntLit(t.text, t.line, t.col) }
             DOUBLE_LIT -> { advance(); DoubleLit(t.text, t.line, t.col) }
-            BASED -> { advance(); BoolLit(true, t.line, t.col) }
-            CRINGE -> { advance(); BoolLit(false, t.line, t.col) }
-            GHOSTED -> { advance(); GhostedLit(t.line, t.col) }
-            ME -> { advance(); MeRef(t.line, t.col) }
+            TRUE -> { advance(); BoolLit(true, t.line, t.col) }
+            FALSE -> { advance(); BoolLit(false, t.line, t.col) }
+            NULL -> { advance(); NullLit(t.line, t.col) }
+            THIS -> { advance(); ThisRef(t.line, t.col) }
             IDENT -> { advance(); NameRef(t.text, t.line, t.col) }
             STRING_TMPL -> {
                 advance()

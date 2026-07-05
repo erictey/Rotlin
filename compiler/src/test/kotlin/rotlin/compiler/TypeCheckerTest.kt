@@ -25,34 +25,34 @@ class TypeCheckerTest {
     // ---- inference + mutability ----
 
     @Test
-    fun `rizz cannot be reassigned`() {
-        assertEquals(listOf("E_RIZZ_LOCKED"), errorCodes("rizz x = 5\nx = 6\n"))
+    fun `alpha cannot be reassigned`() {
+        assertEquals(listOf("E_ALPHA_LOCKED"), errorCodes("alpha x = 5\nx = 6\n"))
     }
 
     @Test
-    fun `gyatt reassignment must keep the type`() {
-        assertEquals(listOf("E_TYPE_MISMATCH"), errorCodes("gyatt x = 5\nx = \"nope\"\n"))
-        assertClean("gyatt x = 5\nx = 6\n")
+    fun `beta reassignment must keep the type`() {
+        assertEquals(listOf("E_TYPE_MISMATCH"), errorCodes("beta x = 5\nx = \"nope\"\n"))
+        assertClean("beta x = 5\nx = 6\n")
     }
 
     @Test
     fun `declared type must match initializer`() {
-        assertEquals(listOf("E_TYPE_MISMATCH"), errorCodes("rizz x: aura = \"words\"\n"))
+        assertEquals(listOf("E_TYPE_MISMATCH"), errorCodes("alpha x: aura = \"words\"\n"))
     }
 
     @Test
     fun `gains needs numbers or lore`() {
-        assertClean("gyatt s = 1\ns gains 2\n")
-        assertClean("gyatt s = \"a\"\ns gains \"b\"\n")
-        assertEquals(listOf("E_TYPE_MISMATCH"), errorCodes("gyatt s = 1\ns gains \"b\"\n"))
+        assertClean("beta s = 1\ns gains 2\n")
+        assertClean("beta s = \"a\"\ns gains \"b\"\n")
+        assertEquals(listOf("E_TYPE_MISMATCH"), errorCodes("beta s = 1\ns gains \"b\"\n"))
     }
 
     // ---- names ----
 
     @Test
     fun `undefined name gets a did-you-mean`() {
-        val diags = check("rizz score = 5\nyap(scor)\n")
-        val err = diags.all.single { it.code == "E_WHO_IS_THAT" }
+        val diags = check("alpha score = 5\nyap(scor)\n")
+        val err = diags.all.single { it.code == "E_UNRESOLVED" }
         assertTrue(err.hint!!.contains("score"), "hint was: ${err.hint}")
     }
 
@@ -63,7 +63,7 @@ class TypeCheckerTest {
 
     @Test
     fun `defining a function named like a runtime builtin warns`() {
-        val diags = check("skibidi yap(x: lore) bet\nperiodt\n")
+        val diags = check("tung yap(x: lore) {\n}\n")
         assertTrue(diags.all.any { it.code == "W_SHADOW" })
     }
 
@@ -73,7 +73,7 @@ class TypeCheckerTest {
     fun `call arity is checked`() {
         assertEquals(
             listOf("E_ARITY"),
-            errorCodes("skibidi add(a: aura, b: aura) spits aura bet\nyeet a + b\nperiodt\nyap(add(1))\n"),
+            errorCodes("tung add(a: aura, b: aura) spits aura {\nyeet a + b\n}\nyap(add(1))\n"),
         )
     }
 
@@ -81,7 +81,7 @@ class TypeCheckerTest {
     fun `argument types are checked`() {
         assertEquals(
             listOf("E_TYPE_MISMATCH"),
-            errorCodes("skibidi add(a: aura, b: aura) spits aura bet\nyeet a + b\nperiodt\nyap(add(1, \"x\"))\n"),
+            errorCodes("tung add(a: aura, b: aura) spits aura {\nyeet a + b\n}\nyap(add(1, \"x\"))\n"),
         )
     }
 
@@ -89,70 +89,70 @@ class TypeCheckerTest {
     fun `spits function must yeet on every path`() {
         assertEquals(
             listOf("E_MISSING_YEET"),
-            errorCodes("skibidi f(x: aura) spits aura bet\nsus (x clears 0) bet\nyeet x\nperiodt\nperiodt\n"),
+            errorCodes("tung f(x: aura) spits aura {\nif (x > 0) {\nyeet x\n}\n}\n"),
         )
-        assertClean("skibidi f(x: aura) spits aura bet\nsus (x clears 0) bet\nyeet x\nbruh bet\nyeet 0\nperiodt\nperiodt\n")
+        assertClean("tung f(x: aura) spits aura {\nif (x > 0) {\nyeet x\n} else {\nyeet 0\n}\n}\n")
     }
 
     @Test
     fun `yeet type must match spits`() {
         assertEquals(
             listOf("E_TYPE_MISMATCH"),
-            errorCodes("skibidi f() spits aura bet\nyeet \"words\"\nperiodt\n"),
+            errorCodes("tung f() spits aura {\nyeet \"words\"\n}\n"),
         )
     }
 
     // ---- null safety ----
 
     @Test
-    fun `ghosted needs a maybe type`() {
-        assertEquals(listOf("E_TYPE_MISMATCH"), errorCodes("gyatt name: lore = ghosted\n"))
-        assertEquals(listOf("E_GHOST_ONLY"), errorCodes("rizz x = ghosted\n"))
-        assertClean("rizz x: maybe lore = ghosted\n")
+    fun `null needs a maybe type`() {
+        assertEquals(listOf("E_TYPE_MISMATCH"), errorCodes("beta name: lore = null\n"))
+        assertEquals(listOf("E_NULL_INIT"), errorCodes("alpha x = null\n"))
+        assertClean("alpha x: maybe lore = null\n")
     }
 
     @Test
     fun `deref of maybe without a check is unsafe`() {
-        val diags = check("rizz name: maybe lore = listen()\nyap(name.length)\n")
+        val diags = check("alpha name: maybe lore = listen()\nyap(name.length)\n")
         val err = diags.all.single { it.code == "E_NULL_UNSAFE" }
-        assertTrue(err.hint!!.contains("aint ghosted"))
+        assertTrue(err.hint!!.contains("aint null"))
         assertTrue(err.hint!!.contains("?."))
-        assertTrue(err.hint!!.contains("deadass"))
+        assertTrue(err.hint!!.contains("deadahh"))
     }
 
     @Test
     fun `safe call and otherwise are fine on maybe`() {
-        assertClean("rizz name: maybe lore = listen()\nyap(name?.length)\nyap(name otherwise \"anon\")\n")
+        assertClean("alpha name: maybe lore = listen()\nyap(name?.length)\nyap(name otherwise \"anon\")\n")
     }
 
     @Test
     fun `otherwise unwraps the maybe`() {
-        assertClean("rizz name: maybe lore = listen()\nrizz n = name otherwise \"anon\"\nyap(n.length)\n")
+        assertClean("alpha name: maybe lore = listen()\nalpha n = name otherwise \"anon\"\nyap(n.length)\n")
     }
 
     @Test
-    fun `smart cast after aint ghosted on a rizz`() {
-        assertClean("rizz name: maybe lore = listen()\nsus (name aint ghosted) bet\nyap(name.length)\nperiodt\n")
+    fun `smart cast after aint null on an alpha`() {
+        assertClean("alpha name: maybe lore = listen()\nif (name aint null) {\nyap(name.length)\n}\n")
     }
 
     @Test
-    fun `twins ghosted narrows the else branch`() {
+    fun `is null narrows the else branch`() {
         assertClean(
-            "rizz name: maybe lore = listen()\nsus (name twins ghosted) bet\nyap(\"ghosted\")\nbruh bet\nyap(name.length)\nperiodt\n",
+            "alpha name: maybe lore = listen()\nif (name is null) {\nyap(\"missing\")\n} else {\nyap(name.length)\n}\n",
         )
     }
 
     @Test
-    fun `gyatt does not smart cast and the roast says why`() {
-        val diags = check("gyatt name: maybe lore = listen()\nsus (name aint ghosted) bet\nyap(name.length)\nperiodt\n")
+    fun `beta does not smart cast and the hint says why`() {
+        val diags = check("beta name: maybe lore = listen()\nif (name aint null) {\nyap(name.length)\n}\n")
         val err = diags.all.single { it.code == "E_NULL_UNSAFE" }
-        assertTrue(err.hint!!.contains("gyatt"), "hint was: ${err.hint}")
+        assertTrue(err.hint!!.contains("beta"), "hint was: ${err.hint}")
     }
 
     @Test
-    fun `deadass on something never ghosted warns`() {
-        val diags = check("rizz s = \"x\"\nyap(s deadass)\n")
-        assertTrue(diags.all.any { it.code == "W_NEVER_GHOSTED" })
+    fun `deadahh on something never null warns`() {
+        val diags = check("alpha s = \"x\"\nyap(s deadahh)\n")
+        assertTrue(diags.all.any { it.code == "W_NEVER_NULL" })
     }
 
     // ---- operators ----
@@ -172,13 +172,13 @@ class TypeCheckerTest {
 
     @Test
     fun `logic operators need facts`() {
-        assertEquals(listOf("E_TYPE_MISMATCH"), errorCodes("sus (1 and based) bet\nperiodt\n"))
+        assertEquals(listOf("E_TYPE_MISMATCH"), errorCodes("if (1 and true) {\n}\n"))
     }
 
     @Test
     fun `comparisons need matching numbers`() {
-        assertClean("sus (1 clears 0) bet\nperiodt\n")
-        assertEquals(listOf("E_TYPE_MISMATCH"), errorCodes("sus (1 clears \"a\") bet\nperiodt\n"))
+        assertClean("if (1 > 0) {\n}\n")
+        assertEquals(listOf("E_TYPE_MISMATCH"), errorCodes("if (1 > \"a\") {\n}\n"))
     }
 
     // ---- control flow ----
@@ -187,82 +187,82 @@ class TypeCheckerTest {
     fun `dip and skip outside a loop are errors`() {
         assertEquals(listOf("E_DIP_NOWHERE"), errorCodes("dip\n"))
         assertEquals(listOf("E_SKIP_NOWHERE"), errorCodes("skip\n"))
-        assertClean("grind (based) bet\ndip\nperiodt\n")
+        assertClean("grind (true) {\ndip\n}\n")
     }
 
     // ---- oop ----
 
     @Test
     fun `constructor calls check arity and types`() {
-        val cls = "sigma Dog(rizz name: lore) bet\nperiodt\n"
-        assertEquals(listOf("E_ARITY"), errorCodes("${cls}rizz d = Dog()\n"))
-        assertEquals(listOf("E_TYPE_MISMATCH"), errorCodes("${cls}rizz d = Dog(5)\n"))
-        assertClean("${cls}rizz d = Dog(\"rex\")\nyap(d.name)\n")
+        val cls = "class Dog(alpha name: lore) {\n}\n"
+        assertEquals(listOf("E_ARITY"), errorCodes("${cls}alpha d = Dog()\n"))
+        assertEquals(listOf("E_TYPE_MISMATCH"), errorCodes("${cls}alpha d = Dog(5)\n"))
+        assertClean("${cls}alpha d = Dog(\"rex\")\nyap(d.name)\n")
     }
 
     @Test
-    fun `me outside a sigma is an error`() {
-        assertEquals(listOf("E_ME_NOWHERE"), errorCodes("yap(me)\n"))
+    fun `this outside a class is an error`() {
+        assertEquals(listOf("E_THIS_NOWHERE"), errorCodes("yap(this)\n"))
     }
 
     @Test
-    fun `methods see ctor props through me`() {
+    fun `methods see ctor props through this`() {
         assertClean(
-            "sigma Dog(rizz name: lore) bet\nskibidi intro() spits lore bet\nyeet \"i am \" + me.name\nperiodt\nperiodt\n",
+            "class Dog(alpha name: lore) {\ntung intro() spits lore {\nyeet \"i am \" + this.name\n}\n}\n",
         )
     }
 
     // ---- squads, stashes, mog ----
 
     @Test
-    fun `squad elements infer and mixed squads roast`() {
-        assertClean("rizz xs = squad(1, 2, 3)\nyap(xs[0] + 1)\n")
-        assertEquals(listOf("E_TYPE_MISMATCH"), errorCodes("rizz xs = squad(1, \"two\")\n"))
+    fun `squad elements infer and mixed squads error`() {
+        assertClean("alpha xs = squad(1, 2, 3)\nyap(xs[0] + 1)\n")
+        assertEquals(listOf("E_TYPE_MISMATCH"), errorCodes("alpha xs = squad(1, \"two\")\n"))
     }
 
     @Test
     fun `stash indexing returns a maybe`() {
-        // m["k"] might be ghosted - using it raw as a number is the teaching moment
-        val diags = check("gyatt m: stash<lore, aura> = stash()\nrizz v = m[\"k\"]\nyap(v + 1)\n")
+        // m["k"] might be null - using it raw as a number is the teaching moment
+        val diags = check("beta m: stash<lore, aura> = stash()\nalpha v = m[\"k\"]\nyap(v + 1)\n")
         assertTrue(diags.all.any { it.code == "E_MIXED_NUMBERS" || it.code == "E_TYPE_MISMATCH" })
-        assertClean("gyatt m: stash<lore, aura> = stash()\nyap((m[\"k\"] otherwise 0) + 1)\n")
+        assertClean("beta m: stash<lore, aura> = stash()\nyap((m[\"k\"] otherwise 0) + 1)\n")
     }
 
     @Test
     fun `mog over a squad types the loop variable`() {
-        assertClean("rizz xs = squad(1, 2)\nmog (x inside xs) bet\nyap(x + 1)\nperiodt\n")
-        assertClean("mog (i inside 1 through 5) bet\nyap(i * 2)\nperiodt\n")
+        assertClean("alpha xs = squad(1, 2)\nmog (x inside xs) {\nyap(x + 1)\n}\n")
+        assertClean("mog (i inside 1 through 5) {\nyap(i * 2)\n}\n")
     }
 
     @Test
-    fun `mog over something unloopable roasts`() {
-        assertEquals(listOf("E_TYPE_MISMATCH"), errorCodes("mog (x inside 5) bet\nperiodt\n"))
+    fun `mog over something unloopable errors`() {
+        assertEquals(listOf("E_TYPE_MISMATCH"), errorCodes("mog (x inside 5) {\n}\n"))
     }
 
     @Test
-    fun `vibecheck branch values must match the subject`() {
+    fun `when branch values must match the subject`() {
         assertEquals(
             listOf("E_TYPE_MISMATCH"),
-            errorCodes("rizz x = 5\nvibecheck (x) bet\n\"one\" -> yap(1)\nperiodt\n"),
+            errorCodes("alpha x = 5\nwhen (x) {\n\"one\" -> yap(1)\n}\n"),
         )
-        assertClean("rizz x = 5\nvibecheck (x) bet\n1 -> yap(1)\nbruh -> yap(0)\nperiodt\n")
+        assertClean("alpha x = 5\nwhen (x) {\n1 -> yap(1)\nelse -> yap(0)\n}\n")
     }
 
     // ---- exceptions ----
 
     @Test
-    fun `finna scopes the catch name to the catch block`() {
-        assertClean("finna bet\nyap(1)\ncaught in 4k (oops) bet\nyap(oops)\nperiodt\n")
+    fun `try scopes the catch name to the catch block`() {
+        assertClean("try {\nyap(1)\n} catch (oops) {\nyap(oops)\n}\n")
         assertEquals(
-            listOf("E_WHO_IS_THAT"),
-            errorCodes("finna bet\nyap(1)\ncaught in 4k (oops) bet\nyap(1)\nperiodt\nyap(oops)\n"),
+            listOf("E_UNRESOLVED"),
+            errorCodes("try {\nyap(1)\n} catch (oops) {\nyap(1)\n}\nyap(oops)\n"),
         )
     }
 
     @Test
     fun `crashout counts as a returning path`() {
         assertClean(
-            "skibidi f(x: aura) spits aura bet\nsus (x clears 0) bet\nyeet x\nbruh bet\ncrashout \"negative aura\"\nperiodt\nperiodt\n",
+            "tung f(x: aura) spits aura {\nif (x > 0) {\nyeet x\n} else {\ncrashout \"negative input\"\n}\n}\n",
         )
     }
 
@@ -271,27 +271,27 @@ class TypeCheckerTest {
     @Test
     fun `names inside page lambdas are still checked`() {
         val diags = check(
-            "rizz score = 5\ndrop site on 3000 bet\npage(\"/\") bet\nyap(scor)\nperiodt\nperiodt\n",
+            "alpha score = 5\ndrop site on 3000 {\npage(\"/\") {\nyap(scor)\n}\n}\n",
         )
-        assertTrue(diags.all.any { it.code == "E_WHO_IS_THAT" })
+        assertTrue(diags.all.any { it.code == "E_UNRESOLVED" })
     }
 
     @Test
     fun `checker still runs on a parse-recovered ast`() {
         // banned symbols recover to the intended token, so the checker can
         // still deliver type errors in the same run
-        val lexed = Lexer("rizz score = 5\nsus (scor == 5) bet\nperiodt\n").lex()
+        val lexed = Lexer("alpha score = 5\nif (scor == 5) {\n}\n").lex()
         val program = Parser(lexed.tokens, lexed.diagnostics).parseProgram()
         TypeChecker(lexed.diagnostics).check(program)
         val codes = lexed.diagnostics.all.map { it.code }
         assertTrue("E_BANNED_SYMBOL" in codes, "codes: $codes")
-        assertTrue("E_WHO_IS_THAT" in codes, "codes: $codes")
+        assertTrue("E_UNRESOLVED" in codes, "codes: $codes")
     }
 
     @Test
     fun `clean clicker program type checks`() {
         assertClean(
-            "gyatt score = 0\ndrop site on 3000 bet\npage(\"/\") bet\nbigyap(\"AURA\")\nyap(\"aura: \$score\")\nsmash(\"+1\") does bet\nscore gains 1\nperiodt\nperiodt\nperiodt\n",
+            "beta score = 0\ndrop site on 3000 {\npage(\"/\") {\nbigyap(\"AURA\")\nyap(\"aura: \$score\")\nsmash(\"+1\") does {\nscore gains 1\n}\n}\n}\n",
         )
     }
 }

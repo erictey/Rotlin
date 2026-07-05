@@ -3,6 +3,7 @@ package rotlin.compiler
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class RoastRendererTest {
@@ -15,22 +16,22 @@ class RoastRendererTest {
     }
 
     @Test
-    fun `renders header excerpt caret fix and vibe line`() {
-        val src = "rizz score = 5\nyap(scor)\n"
+    fun `renders header excerpt caret and fix`() {
+        val src = "alpha score = 5\nyap(scor)\n"
         val diags = diagsFor(src)
         val out = RoastRenderer.renderAll("app.rot", src, diags)
 
         assertContains(out, "[app.rot line 2]")
-        assertContains(out, "who is `scor`??")
+        assertContains(out, "error: unresolved reference: `scor`")
         assertContains(out, "2 | yap(scor)")
         assertContains(out, "^")
         assertContains(out, "fix: did you mean `score`?")
-        assertContains(out, ">>") // the vibe line
+        assertFalse(out.contains(">>"), "no vibe line expected, got: $out")
     }
 
     @Test
     fun `caret sits under the offending column`() {
-        val src = "rizz score = 5\nyap(scor)\n"
+        val src = "alpha score = 5\nyap(scor)\n"
         val diags = diagsFor(src)
         val out = RoastRenderer.renderAll("app.rot", src, diags)
         val lines = out.lines()
@@ -51,7 +52,7 @@ class RoastRendererTest {
 
     @Test
     fun `aura math deducts 100 per error and 25 per warning`() {
-        val src = "rizz s = \"x\"\nyap(s deadass)\nyap(nope)\nyap(alsonope)\nyap(third)\n"
+        val src = "alpha s = \"x\"\nyap(s deadahh)\nyap(nope)\nyap(alsonope)\nyap(third)\n"
         val diags = diagsFor(src)
         assertEquals(3, diags.all.count { it.severity == Severity.ERROR })
         assertEquals(1, diags.all.count { it.severity == Severity.WARNING })
@@ -60,11 +61,11 @@ class RoastRendererTest {
     }
 
     @Test
-    fun `clean compile is a W`() {
+    fun `clean compile reports full aura`() {
         val diags = diagsFor("yap(\"hi\")\n")
         assertTrue(diags.all.isEmpty())
         assertContains(RoastRenderer.auraSummary(diags), "+1000 aura")
-        assertContains(RoastRenderer.auraSummary(diags), "no cap")
+        assertContains(RoastRenderer.auraSummary(diags), "no errors")
     }
 
     @Test

@@ -6,9 +6,9 @@ data class LexResult(val tokens: List<Token>, val diagnostics: DiagnosticBag)
  * Hand-written scanner. Newlines are tokens (statements are line-oriented);
  * consecutive newlines collapse to one. Strings and comments are protected -
  * keywords inside them never lex as keywords. Multi-word phrases (`is a`,
- * `vibes with`, `caught in 4k`) fuse via longest-match with rollback.
- * Symbols that are never legal Rotlin (`==`, `{`, `&&`, ...) lex as BANNED
- * tokens carrying the word-form suggestion for the parser to roast with.
+ * `vibes with`) fuse via longest-match with rollback.
+ * Symbols that are never legal Rotlin (`==`, `&&`, ...) lex as BANNED
+ * tokens carrying the word-form suggestion for the parser to report.
  */
 class Lexer(src: String) {
 
@@ -102,7 +102,6 @@ class Lexer(src: String) {
     private data class Phrase(val words: List<String>, val type: TokenType)
 
     private val phrases = listOf(
-        Phrase(listOf("caught", "in", "4k"), TokenType.CAUGHT_IN_4K),
         Phrase(listOf("vibes", "with"), TokenType.VIBES_WITH),
         Phrase(listOf("is", "an"), TokenType.IS_A),
         Phrase(listOf("is", "a"), TokenType.IS_A),
@@ -257,13 +256,13 @@ class Lexer(src: String) {
 
         val two = if (pos + 1 < src.length) src.substring(pos, pos + 2) else ""
         when {
-            two == "==" -> banned("==", "twins")
+            two == "==" -> banned("==", "is")
             two == "!=" -> banned("!=", "aint")
             two == "<=" -> banned("<=", "atmost")
             two == ">=" -> banned(">=", "atleast")
             two == "&&" -> banned("&&", "and")
             two == "||" -> banned("||", "or")
-            two == "!!" -> banned("!!", "deadass")
+            two == "!!" -> banned("!!", "deadahh")
             two == "?:" -> banned("?:", "otherwise")
             two == "?." -> symbol("?.", TokenType.SAFE_DOT)
             two == "->" -> symbol("->", TokenType.ARROW)
@@ -275,6 +274,8 @@ class Lexer(src: String) {
                 '.' -> symbol(".", TokenType.DOT)
                 '[' -> symbol("[", TokenType.LBRACKET)
                 ']' -> symbol("]", TokenType.RBRACKET)
+                '{' -> symbol("{", TokenType.LBRACE)
+                '}' -> symbol("}", TokenType.RBRACE)
                 '<' -> symbol("<", TokenType.LT)
                 '>' -> symbol(">", TokenType.GT)
                 '=' -> symbol("=", TokenType.ASSIGN)
@@ -283,8 +284,6 @@ class Lexer(src: String) {
                 '*' -> symbol("*", TokenType.STAR)
                 '/' -> symbol("/", TokenType.SLASH)
                 '%' -> symbol("%", TokenType.PERCENT)
-                '{' -> banned("{", "bet")
-                '}' -> banned("}", "periodt")
                 ';' -> banned(";", "a new line")
                 '!' -> banned("!", "not")
                 '&' -> banned("&", "and")

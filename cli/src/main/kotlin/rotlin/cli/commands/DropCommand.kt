@@ -26,7 +26,7 @@ class DropCommand(private val err: PrintStream = System.err) {
 
     fun run(file: Path): Int {
         if (!Files.exists(file)) {
-            err.println("can't find `$file` - that file is ghosting us")
+            err.println("can't find `$file` - no such file")
             return 1
         }
         val fileName = file.fileName.toString()
@@ -56,7 +56,7 @@ class DropCommand(private val err: PrintStream = System.err) {
                     "\n\n" + RoastRenderer.auraSummary(result.diagnostics)
                 err.println(RoastRenderer.renderAll(fileName, source, result.diagnostics, Term.color))
                 err.println(RoastRenderer.auraSummary(result.diagnostics, Term.color))
-                host.broadcastRoast("MID CODE DETECTED\n$text")
+                host.broadcastRoast("COMPILE ERROR\n$text")
                 return false
             }
 
@@ -74,7 +74,7 @@ class DropCommand(private val err: PrintStream = System.err) {
                     "${where}the cook failed: ${it.message.lineSequence().first()}"
                 }
                 err.println(text)
-                host.broadcastRoast("MID CODE DETECTED\n$text")
+                host.broadcastRoast("COMPILE ERROR\n$text")
                 return false
             }
 
@@ -82,7 +82,7 @@ class DropCommand(private val err: PrintStream = System.err) {
                 Runner(listOf(classesDir)).runMain(output.mainClassFqn)
                 true
             } catch (e: Throwable) {
-                val text = "SKILL ISSUE: ${e.message ?: e.javaClass.simpleName}"
+                val text = "runtime error: ${e.message ?: e.javaClass.simpleName}"
                 err.println(text)
                 host.broadcastRoast(text)
                 false
@@ -102,7 +102,7 @@ class DropCommand(private val err: PrintStream = System.err) {
             err.println("cooking...")
             if (buildAndRun()) {
                 host.broadcastReload()
-                err.println("reloaded, W")
+                err.println("reloaded")
             }
         }
     }

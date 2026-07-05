@@ -23,7 +23,7 @@ class FacadeSmokeTest {
         kt.writeText(
             """
             @file:JvmName("HelloMain")
-            fun main() { println("skibidi ok") }
+            fun main() { println("tung ok") }
             """.trimIndent()
         )
         val outDir = tmp.resolve("classes")
@@ -40,6 +40,6 @@ class FacadeSmokeTest {
         } finally {
             System.setOut(old)
         }
-        assertEquals("skibidi ok", captured.toString(Charsets.UTF_8).trim())
+        assertEquals("tung ok", captured.toString(Charsets.UTF_8).trim())
     }
 }

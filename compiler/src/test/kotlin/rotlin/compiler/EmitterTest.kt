@@ -19,14 +19,14 @@ class EmitterTest {
         val src = """
             summon kotlin.math.PI
 
-            skibidi greet(name: lore) spits lore bet
+            tung greet(name: lore) spits lore {
             yeet "sup " + name
-            periodt
+            }
 
-            gyatt count = 0
-            grind (count flops 3) bet
+            beta count = 0
+            grind (count < 3) {
             count gains 1
-            periodt
+            }
             yap(greet("bro"))
         """.trimIndent()
 
@@ -52,7 +52,7 @@ class EmitterTest {
 
     @Test
     fun `every rot line maps back through the line map`() {
-        val src = "rizz a = 1\nyap(a)\n"
+        val src = "alpha a = 1\nyap(a)\n"
         val out = emit(src)
         // prelude is 2 lines: kt line 3 == rot line 1
         assertEquals(1, out.lineMap.toRotLine(3))
@@ -61,8 +61,8 @@ class EmitterTest {
     }
 
     @Test
-    fun `hood joins package and runtime import on one line`() {
-        val out = emit("hood my.pkg\nyap(1)\n")
+    fun `package joins kotlin package and runtime import on one line`() {
+        val out = emit("package my.pkg\nyap(1)\n")
         val lines = out.ktText.lines()
         assertEquals("@file:JvmName(\"RotMain\")", lines[0])
         assertEquals("", lines[1])
@@ -72,19 +72,19 @@ class EmitterTest {
 
     @Test
     fun `word operators translate to kotlin operators`() {
-        val out = emit("rizz ok = a twins b and c atleast d\nscore gains 5\nrizz r = 1 through 10\nrizz n = x otherwise 0\nrizz d = y deadass\n")
+        val out = emit("alpha ok = a is b and c atleast d\nscore gains 5\nalpha r = 1 through 10\nalpha n = x otherwise 0\nalpha d = y deadahh\n")
         val lines = out.ktText.lines()
         assertEquals("val ok = (a == b) && (c >= d)", lines[2])
         assertEquals("fun main() { score += 5", lines[3]) // first statement opens main inline
         assertEquals("val r = 1..10", lines[4])
         assertEquals("val n = x ?: 0", lines[5])
-        assertEquals("val d = y.deadass()", lines[6])
+        assertEquals("val d = y.deadahh()", lines[6])
         assertEquals("}", lines[7])
     }
 
     @Test
     fun `rotlin type names map to kotlin types`() {
-        val out = emit("skibidi f(a: aura, r: ratio, s: lore, ok: fact, xs: squad<aura>, m: maybe lore) spits aura bet\nyeet a\nperiodt\n")
+        val out = emit("tung f(a: aura, r: ratio, s: lore, ok: fact, xs: squad<aura>, m: maybe lore) spits aura {\nyeet a\n}\n")
         assertEquals(
             "fun f(a: Int, r: Double, s: String, ok: Boolean, xs: MutableList<Int>, m: String?): Int {",
             out.ktText.lines()[2],
@@ -93,15 +93,15 @@ class EmitterTest {
 
     @Test
     fun `identifiers that are kotlin keywords get backticks`() {
-        val out = emit("rizz fun = 1\nyap(fun)\n")
+        val out = emit("alpha fun = 1\nyap(fun)\n")
         val lines = out.ktText.lines()
         assertEquals("val `fun` = 1", lines[2])
         assertEquals("fun main() { yap(`fun`)", lines[3])
     }
 
     @Test
-    fun `sus bruh chain emits else on the shared line`() {
-        val src = "sus (x twins 1) bet\nyap(\"one\")\nperiodt bruh bet\nyap(\"other\")\nperiodt\n"
+    fun `if else chain emits else on the shared line`() {
+        val src = "if (x is 1) {\nyap(\"one\")\n} else {\nyap(\"other\")\n}\n"
         val out = emit(src)
         val lines = out.ktText.lines()
         assertEquals("fun main() { if (x == 1) {", lines[2])
@@ -121,17 +121,17 @@ class EmitterTest {
     @Test
     fun `web dsl emits trailing lambdas and site call`() {
         val src = """
-            gyatt score = 0
+            beta score = 0
 
-            drop site on 3000 bet
-            page("/") bet
+            drop site on 3000 {
+            page("/") {
             bigyap("AURA CLICKER")
             yap("aura: ${'$'}score")
-            smash("+1") does bet
+            smash("+1") does {
             score gains 1
-            periodt
-            periodt
-            periodt
+            }
+            }
+            }
         """.trimIndent()
         val out = emit(src)
         val lines = out.ktText.lines()
@@ -149,17 +149,17 @@ class EmitterTest {
     }
 
     @Test
-    fun `sigma emits open class with modifiers mapped`() {
+    fun `class emits open class with modifiers mapped`() {
         val src = """
-            sigma Dog(rizz name: lore) is a Animal vibes with Fetchable bet
-            gatekeep gyatt barks = 0
-            remix skibidi speak() spits lore bet
-            yeet "woof: " + me.name
-            periodt
-            skibidi bark() bet
+            class Dog(alpha name: lore) is a Animal vibes with Fetchable {
+            private beta barks = 0
+            override tung speak() spits lore {
+            yeet "woof: " + this.name
+            }
+            tung bark() {
             barks gains 1
-            periodt
-            periodt
+            }
+            }
         """.trimIndent()
         val lines = emit(src).ktText.lines()
         assertEquals("open class Dog(val name: String) : Animal(), Fetchable {", lines[2])
@@ -175,7 +175,7 @@ class EmitterTest {
 
     @Test
     fun `npc emits object and vibe emits interface`() {
-        val out = emit("npc Config bet\nrizz port = 3000\nperiodt\nvibe Fetchable bet\nskibidi fetch() spits lore\nperiodt\n")
+        val out = emit("npc Config {\nalpha port = 3000\n}\nvibe Fetchable {\ntung fetch() spits lore\n}\n")
         val lines = out.ktText.lines()
         assertEquals("object Config {", lines[2])
         assertEquals("val port = 3000", lines[3])
@@ -186,8 +186,8 @@ class EmitterTest {
     }
 
     @Test
-    fun `vibecheck emits when with inline and else branches`() {
-        val src = "vibecheck (x) bet\n1 -> yap(\"one\")\n2, 3 -> yap(\"few\")\nbruh -> yap(\"nah\")\nperiodt\n"
+    fun `when emits kotlin when with inline and else branches`() {
+        val src = "when (x) {\n1 -> yap(\"one\")\n2, 3 -> yap(\"few\")\nelse -> yap(\"nah\")\n}\n"
         val lines = emit(src).ktText.lines()
         assertEquals("fun main() { when (x) {", lines[2])
         assertEquals("1 -> yap(\"one\")", lines[3])
@@ -199,7 +199,7 @@ class EmitterTest {
 
     @Test
     fun `mog emits for and index emits brackets`() {
-        val src = "rizz xs = squad(1, 2, 3)\nmog (x inside xs) bet\nyap(xs[0] + x)\nperiodt\n"
+        val src = "alpha xs = squad(1, 2, 3)\nmog (x inside xs) {\nyap(xs[0] + x)\n}\n"
         val lines = emit(src).ktText.lines()
         assertEquals("val xs = squad(1, 2, 3)", lines[2])
         assertEquals("fun main() { for (x in xs) {", lines[3])
@@ -209,8 +209,8 @@ class EmitterTest {
     }
 
     @Test
-    fun `finna emits try catch and crashout wraps in skill issue`() {
-        val src = "finna bet\ncrashout \"nope\"\ncaught in 4k (oops) bet\nyap(\"got: \" + oops)\nperiodt\n"
+    fun `try emits try catch and crashout wraps in skill issue`() {
+        val src = "try {\ncrashout \"nope\"\n} catch (oops) {\nyap(\"got: \" + oops)\n}\n"
         val lines = emit(src).ktText.lines()
         assertEquals("fun main() { try {", lines[2])
         assertEquals("throw SkillIssue(lore(\"nope\"))", lines[3])
@@ -221,8 +221,8 @@ class EmitterTest {
     }
 
     @Test
-    fun `ghosted emits null and based cringe emit booleans`() {
-        val out = emit("rizz g = ghosted\nrizz t = based\nrizz f = cringe\n")
+    fun `null and boolean literals emit as kotlin literals`() {
+        val out = emit("alpha g = null\nalpha t = true\nalpha f = false\n")
         val lines = out.ktText.lines()
         assertEquals("val g = null", lines[2])
         assertEquals("val t = true", lines[3])

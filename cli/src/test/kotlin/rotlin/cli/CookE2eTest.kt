@@ -47,7 +47,7 @@ class CookE2eTest {
     }
 
     @Test
-    fun `quiz example with classes vibecheck and mog runs`() {
+    fun `quiz example with classes when and mog runs`() {
         val src = Files.readString(Paths.get("..", "examples", "quiz.rot"))
         val run = cook(src)
         assertEquals(0, run.exitCode, "diagnostics: ${run.diag}")
@@ -59,25 +59,25 @@ class CookE2eTest {
 
     @Test
     fun `rotlin parse error reports rot line and skips kotlinc`() {
-        val run = cook("rizz a = 1\nsus (a == 1) bet\nyap(a)\nperiodt\n")
+        val run = cook("alpha a = 1\nif (a == 1) {\nyap(a)\n}\n")
         assertNotEquals(0, run.exitCode)
         assertContains(run.diag, "line 2")
-        assertContains(run.diag, "twins")
+        assertContains(run.diag, "write `is` instead")
     }
 
     @Test
     fun `kotlinc-only error maps back to the rot line`() {
         // `nope` is undefined - phase 1 has no typechecker, so kotlinc catches it
-        val run = cook("rizz a = 1\nyap(nope)\n")
+        val run = cook("alpha a = 1\nyap(nope)\n")
         assertNotEquals(0, run.exitCode)
         assertContains(run.diag, "line 2")
     }
 
     @Test
-    fun `deadass on ghosted crashes with caught in 4k and the rot line`() {
-        val run = cook("rizz name: maybe lore = ghosted\nyap(name deadass)\n")
+    fun `deadahh on null crashes with a runtime error and the rot line`() {
+        val run = cook("alpha name: maybe lore = null\nyap(name deadahh)\n")
         assertNotEquals(0, run.exitCode)
-        assertContains(run.diag, "caught in 4k")
+        assertContains(run.diag, "deadahh")
         assertContains(run.diag, "line 2")
     }
 }

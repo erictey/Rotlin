@@ -25,27 +25,27 @@ class ParserTest {
     // ---- declarations ----
 
     @Test
-    fun `rizz and gyatt declarations`() {
-        assertEquals("(val count 5)", sexp("rizz count = 5"))
-        assertEquals("(var lives: aura 3)", sexp("gyatt lives: aura = 3"))
+    fun `alpha and beta declarations`() {
+        assertEquals("(val count 5)", sexp("alpha count = 5"))
+        assertEquals("(var lives: aura 3)", sexp("beta lives: aura = 3"))
     }
 
     @Test
     fun `maybe types parse`() {
-        assertEquals("(val name: maybe lore (str \"x\"))", sexp("rizz name: maybe lore = \"x\""))
+        assertEquals("(val name: maybe lore (str \"x\"))", sexp("alpha name: maybe lore = \"x\""))
     }
 
     @Test
-    fun `skibidi function with params spits and body`() {
+    fun `tung function with params spits and body`() {
         assertEquals(
             "(fun add (a: aura, b: aura): aura {(return (+ a b))})",
-            sexp("skibidi add(a: aura, b: aura) spits aura bet\n    yeet a + b\nperiodt"),
+            sexp("tung add(a: aura, b: aura) spits aura {\n    yeet a + b\n}"),
         )
     }
 
     @Test
     fun `generic type arguments parse in type position`() {
-        assertEquals("(val xs: squad<aura> (call squad))", sexp("rizz xs: squad<aura> = squad()"))
+        assertEquals("(val xs: squad<aura> (call squad))", sexp("alpha xs: squad<aura> = squad()"))
     }
 
     // ---- expressions + precedence ----
@@ -57,14 +57,14 @@ class ParserTest {
     }
 
     @Test
-    fun `word operators with logical precedence`() {
-        assertEquals("(&& (== a b) (> c d))", exprSexp("a twins b and c clears d"))
+    fun `word and symbol operators with logical precedence`() {
+        assertEquals("(&& (== a b) (> c d))", exprSexp("a is b and c > d"))
         assertEquals("(|| a (&& b c))", exprSexp("a or b and c"))
     }
 
     @Test
     fun `otherwise binds tighter than comparison like kotlin elvis`() {
-        assertEquals("(> (?: x 0) 5)", exprSexp("x otherwise 0 clears 5"))
+        assertEquals("(> (?: x 0) 5)", exprSexp("x otherwise 0 > 5"))
     }
 
     @Test
@@ -79,9 +79,9 @@ class ParserTest {
     }
 
     @Test
-    fun `member access chain with safe dot and deadass`() {
+    fun `member access chain with safe dot and deadahh`() {
         assertEquals("(?. user name)", exprSexp("user?.name"))
-        assertEquals("(deadass (. user name))", exprSexp("user.name deadass"))
+        assertEquals("(deadahh (. user name))", exprSexp("user.name deadahh"))
         assertEquals("(call (. list add) 5)", exprSexp("list.add(5)"))
     }
 
@@ -96,26 +96,26 @@ class ParserTest {
     // ---- statements ----
 
     @Test
-    fun `sus bruh chains`() {
+    fun `if else chains`() {
         assertEquals(
             "(if (== x 1) {(call yap (str \"one\"))} else {(call yap (str \"other\"))})",
-            sexp("sus (x twins 1) bet\n    yap(\"one\")\nperiodt bruh bet\n    yap(\"other\")\nperiodt"),
+            sexp("if (x is 1) {\n    yap(\"one\")\n} else {\n    yap(\"other\")\n}"),
         )
         assertEquals(
             "(if a {b} else (if c {d} else {e}))",
-            sexp("sus (a) bet\nb\nperiodt bruh sus (c) bet\nd\nperiodt bruh bet\ne\nperiodt"),
+            sexp("if (a) {\nb\n} else if (c) {\nd\n} else {\ne\n}"),
         )
     }
 
     @Test
-    fun `bare bruh closes the then block without periodt`() {
+    fun `bare else closes the then block without a brace`() {
         assertEquals(
             "(if (== x 1) {(call yap 1)} else {(call yap 2)})",
-            sexp("sus (x twins 1) bet\n    yap(1)\nbruh bet\n    yap(2)\nperiodt"),
+            sexp("if (x is 1) {\n    yap(1)\nelse {\n    yap(2)\n}"),
         )
         assertEquals(
             "(if a {b} else (if c {d} else {e}))",
-            sexp("sus (a) bet\nb\nbruh sus (c) bet\nd\nbruh bet\ne\nperiodt"),
+            sexp("if (a) {\nb\nelse if (c) {\nd\nelse {\ne\n}"),
         )
     }
 
@@ -123,13 +123,13 @@ class ParserTest {
     fun `grind loop with dip and skip`() {
         assertEquals(
             "(while (< i 3) {(+= i 1); (break); (continue)})",
-            sexp("grind (i flops 3) bet\n    i gains 1\n    dip\n    skip\nperiodt"),
+            sexp("grind (i < 3) {\n    i gains 1\n    dip\n    skip\n}"),
         )
     }
 
     @Test
     fun `one line block`() {
-        assertEquals("(if x {(call yap 1)})", sexp("sus (x) bet yap(1) periodt"))
+        assertEquals("(if x {(call yap 1)})", sexp("if (x) { yap(1) }"))
     }
 
     @Test
@@ -140,10 +140,10 @@ class ParserTest {
     }
 
     @Test
-    fun `summon and hood parse`() {
-        val (program, diags) = parse("hood my.pkg\nsummon kotlin.math.PI\nsummon rot.web.*\nyap(1)")
+    fun `summon and package parse`() {
+        val (program, diags) = parse("package my.pkg\nsummon kotlin.math.PI\nsummon rot.web.*\nyap(1)")
         assertFalse(diags.hasErrors)
-        assertEquals("my.pkg", program.hood?.path)
+        assertEquals("my.pkg", program.pkg?.path)
         assertEquals(listOf("kotlin.math.PI" to false, "rot.web" to true),
             program.summons.map { it.path to it.wildcard })
     }
@@ -151,18 +151,18 @@ class ParserTest {
     // ---- web DSL forms ----
 
     @Test
-    fun `trailing bet block becomes call lambda`() {
+    fun `trailing brace block becomes call lambda`() {
         assertEquals(
             "(call page (str \"/\") {(call bigyap (str \"YO\"))})",
-            sexp("page(\"/\") bet\n    bigyap(\"YO\")\nperiodt"),
+            sexp("page(\"/\") {\n    bigyap(\"YO\")\n}"),
         )
     }
 
     @Test
-    fun `does before bet is optional sugar`() {
+    fun `does before the block is optional sugar`() {
         assertEquals(
             "(call smash (str \"+1\") {(+= score 1)})",
-            sexp("smash(\"+1\") does bet\n    score gains 1\nperiodt"),
+            sexp("smash(\"+1\") does {\n    score gains 1\n}"),
         )
     }
 
@@ -170,13 +170,13 @@ class ParserTest {
     fun `drop site on parses port and block`() {
         assertEquals(
             "(drop-site 3000 {(call page (str \"/\") {(call yap (str \"hi\"))})})",
-            sexp("drop site on 3000 bet\n    page(\"/\") bet\n        yap(\"hi\")\n    periodt\nperiodt"),
+            sexp("drop site on 3000 {\n    page(\"/\") {\n        yap(\"hi\")\n    }\n}"),
         )
     }
 
     @Test
-    fun `drop without site gives a helpful roast`() {
-        val (_, diags) = parse("drop 3000 bet\nperiodt")
+    fun `drop without site gives a helpful hint`() {
+        val (_, diags) = parse("drop 3000 {\n}")
         assertTrue(diags.hasErrors)
         assertTrue(diags.all.any { it.hint!!.contains("drop site on") })
     }
@@ -184,83 +184,82 @@ class ParserTest {
     // ---- banned symbols recover with diagnostics ----
 
     @Test
-    fun `banned equality symbol reports error but parses as twins`() {
-        val (program, diags) = parse("sus (a == b) bet\nyap(1)\nperiodt")
+    fun `banned equality symbol reports error but parses as is`() {
+        val (program, diags) = parse("if (a == b) {\nyap(1)\n}")
         assertTrue(diags.hasErrors)
-        assertTrue(diags.all.any { it.hint!!.contains("twins") })
+        assertTrue(diags.all.any { it.hint!!.contains("is") })
         assertEquals("(if (== a b) {(call yap 1)})", program.sexp())
     }
 
     @Test
-    fun `lt gt in expression position report error but parse as comparison`() {
-        val (program, diags) = parse("sus (a < b) bet\nyap(1)\nperiodt")
-        assertTrue(diags.hasErrors)
-        assertTrue(diags.all.any { it.hint!!.contains("flops") })
+    fun `lt and gt are legal comparison operators`() {
+        val (program, diags) = parse("if (a < b) {\nyap(1)\n}")
+        assertFalse(diags.hasErrors, "unexpected errors: ${diags.all}")
         assertEquals("(if (< a b) {(call yap 1)})", program.sexp())
+        assertEquals("(> x 5)", exprSexp("x > 5"))
     }
 
     @Test
-    fun `braces report error but parse as bet periodt`() {
-        val (program, diags) = parse("sus (x) { yap(1) }")
-        assertTrue(diags.hasErrors)
-        assertEquals("(if x {(call yap 1)})", program.sexp())
+    fun `old block words are plain identifiers now`() {
+        assertEquals("(val bet 1)", sexp("alpha bet = 1"))
+        assertEquals("(val periodt 2)", sexp("alpha periodt = 2"))
     }
 
     // ---- oop ----
 
     @Test
-    fun `sigma with ctor props inheritance and vibes`() {
+    fun `class with ctor props inheritance and vibes`() {
         assertEquals(
-            "(sigma Dog (val name: lore, age: aura) :Animal() ~Fetchable,Petable " +
-                "{(remix fun speak (): lore {(return (str \"woof\"))})})",
+            "(class Dog (val name: lore, age: aura) :Animal() ~Fetchable,Petable " +
+                "{(override fun speak (): lore {(return (str \"woof\"))})})",
             sexp(
-                "sigma Dog(rizz name: lore, age: aura) is a Animal vibes with Fetchable, Petable bet\n" +
-                    "remix skibidi speak() spits lore bet\nyeet \"woof\"\nperiodt\nperiodt",
+                "class Dog(alpha name: lore, age: aura) is a Animal vibes with Fetchable, Petable {\n" +
+                    "override tung speak() spits lore {\nyeet \"woof\"\n}\n}",
             ),
         )
     }
 
     @Test
-    fun `sigma with super constructor args`() {
+    fun `class with super constructor args`() {
         assertEquals(
-            "(sigma Puppy :Dog((str \"rex\")) {})",
-            sexp("sigma Puppy() is a Dog(\"rex\") bet\nperiodt"),
+            "(class Puppy :Dog((str \"rex\")) {})",
+            sexp("class Puppy() is a Dog(\"rex\") {\n}"),
         )
     }
 
     @Test
     fun `npc and vibe declarations`() {
-        assertEquals("(npc Config {(val port 3000)})", sexp("npc Config bet\nrizz port = 3000\nperiodt"))
+        assertEquals("(npc Config {(val port 3000)})", sexp("npc Config {\nalpha port = 3000\n}"))
         assertEquals(
             "(vibe Fetchable {(fun fetch (): lore)})",
-            sexp("vibe Fetchable bet\nskibidi fetch() spits lore\nperiodt"),
+            sexp("vibe Fetchable {\ntung fetch() spits lore\n}"),
         )
     }
 
     @Test
-    fun `gatekeep members and me references`() {
+    fun `private members and this references`() {
         assertEquals(
-            "(sigma A {(gatekeep val secret 5); (fun expose (): aura {(return (. me secret))})})",
-            sexp("sigma A() bet\ngatekeep rizz secret = 5\nskibidi expose() spits aura bet\nyeet me.secret\nperiodt\nperiodt"),
+            "(class A {(private val secret 5); (fun expose (): aura {(return (. this secret))})})",
+            sexp("class A() {\nprivate alpha secret = 5\ntung expose() spits aura {\nyeet this.secret\n}\n}"),
         )
     }
 
     // ---- control flow ----
 
     @Test
-    fun `vibecheck with values lists and bruh default`() {
+    fun `when with values lists and else default`() {
         assertEquals(
             "(when x [1 -> {(call yap (str \"one\"))}] [2, 3 -> {(call yap (str \"few\"))}] " +
                 "[else -> {(call yap (str \"many\"))}])",
-            sexp("vibecheck (x) bet\n1 -> yap(\"one\")\n2, 3 -> yap(\"few\")\nbruh -> yap(\"many\")\nperiodt"),
+            sexp("when (x) {\n1 -> yap(\"one\")\n2, 3 -> yap(\"few\")\nelse -> yap(\"many\")\n}"),
         )
     }
 
     @Test
-    fun `vibecheck branch can be a block`() {
+    fun `when branch can be a block`() {
         assertEquals(
             "(when x [1 -> {(call yap 1); (call yap 2)}])",
-            sexp("vibecheck (x) bet\n1 -> bet\nyap(1)\nyap(2)\nperiodt\nperiodt"),
+            sexp("when (x) {\n1 -> {\nyap(1)\nyap(2)\n}\n}"),
         )
     }
 
@@ -268,25 +267,29 @@ class ParserTest {
     fun `mog over squads and ranges`() {
         assertEquals(
             "(for item in (call squad 1 2) {(call yap item)})",
-            sexp("mog (item inside squad(1, 2)) bet\nyap(item)\nperiodt"),
+            sexp("mog (item inside squad(1, 2)) {\nyap(item)\n}"),
         )
         assertEquals(
             "(for i in (.. 1 3) {(call yap i)})",
-            sexp("mog (i inside 1 through 3) bet\nyap(i)\nperiodt"),
+            sexp("mog (i inside 1 through 3) {\nyap(i)\n}"),
         )
     }
 
     @Test
-    fun `finna caught in 4k closes the try block like bruh`() {
+    fun `catch closes the try block like else`() {
         assertEquals(
             "(try {(call risky)} catch oops {(call yap oops)})",
-            sexp("finna bet\nrisky()\ncaught in 4k (oops) bet\nyap(oops)\nperiodt"),
+            sexp("try {\nrisky()\ncatch (oops) {\nyap(oops)\n}"),
+        )
+        assertEquals(
+            "(try {(call risky)} catch oops {(call yap oops)})",
+            sexp("try {\nrisky()\n} catch (oops) {\nyap(oops)\n}"),
         )
     }
 
     @Test
     fun `crashout parses a throw`() {
-        assertEquals("(throw (str \"bruh moment\"))", sexp("crashout \"bruh moment\""))
+        assertEquals("(throw (str \"bad moment\"))", sexp("crashout \"bad moment\""))
     }
 
     @Test
@@ -299,7 +302,7 @@ class ParserTest {
 
     @Test
     fun `parse error synchronizes and later statements still parse`() {
-        val (program, diags) = parse("rizz = 5\nrizz ok = 1\n")
+        val (program, diags) = parse("alpha = 5\nalpha ok = 1\n")
         assertTrue(diags.hasErrors)
         assertTrue(program.sexp().contains("(val ok 1)"))
     }

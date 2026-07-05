@@ -1,8 +1,8 @@
 package rotlin.compiler
 
 /**
- * Terminal rendering for diagnostics: header, source excerpt with caret,
- * fix hint, and a deterministic vibe line. Aura math lives here too.
+ * Terminal rendering for diagnostics: header, source excerpt with caret, and
+ * a fix hint - plain compiler language throughout. Aura math lives here too.
  * All output is ASCII - Windows conhost mangles anything fancier.
  */
 object RoastRenderer {
@@ -10,24 +10,6 @@ object RoastRenderer {
     private const val START_AURA = 1000
     private const val ERROR_COST = 100
     private const val WARNING_COST = 25
-
-    private val ERROR_VIBES = listOf(
-        "certified L moment",
-        "chat, is this real?",
-        "this ain't it, gang",
-        "ratio + fell off",
-        "least cooked line in ohio",
-        "my brother in christ, read the fix",
-        "negative aura detected",
-        "emotional damage",
-    )
-
-    private val WARNING_VIBES = listOf(
-        "side eye",
-        "lowkey sus but it runs",
-        "mid but it compiles",
-        "not the vibe, but ok",
-    )
 
     private object Ansi {
         const val RESET = "[0m"
@@ -43,8 +25,9 @@ object RoastRenderer {
         fun paint(code: String, text: String) = if (color) "$code$text${Ansi.RESET}" else text
 
         val headColor = if (d.severity == Severity.ERROR) Ansi.RED else Ansi.YELLOW
+        val label = if (d.severity == Severity.ERROR) "error" else "warning"
         val sb = StringBuilder()
-        sb.append(paint(Ansi.BOLD + headColor, "[$fileName line ${d.line}] ${d.message}"))
+        sb.append(paint(Ansi.BOLD + headColor, "[$fileName line ${d.line}] $label: ${d.message}"))
 
         val src = sourceLines.getOrNull(d.line - 1)
         if (src != null) {
@@ -58,10 +41,6 @@ object RoastRenderer {
         }
 
         d.hint?.let { sb.append('\n').append(paint(Ansi.CYAN, "  fix: $it")) }
-
-        val pool = if (d.severity == Severity.ERROR) ERROR_VIBES else WARNING_VIBES
-        val vibe = pool[stableHash(fileName, d.line, d.code) % pool.size]
-        sb.append('\n').append(paint(Ansi.MAGENTA, "  >> $vibe"))
         return sb.toString()
     }
 
@@ -84,19 +63,11 @@ object RoastRenderer {
         val warnings = diags.all.count { it.severity == Severity.WARNING }
         return when {
             errors == 0 && warnings == 0 ->
-                paint(Ansi.BOLD + Ansi.MAGENTA, "+1000 aura. W code, no cap.")
+                paint(Ansi.BOLD + Ansi.MAGENTA, "+1000 aura. Compiled with no errors and no warnings.")
             errors == 0 ->
-                paint(Ansi.YELLOW, "aura check: ${auraScore(diags)} / 1000 - runs, but $warnings warning(s) are giving side eye")
+                paint(Ansi.YELLOW, "aura check: ${auraScore(diags)} / 1000 - compiled with $warnings warning(s)")
             else ->
-                paint(Ansi.RED, "aura check: ${auraScore(diags)} / 1000 - $errors L(s) to fix, run it back")
+                paint(Ansi.RED, "aura check: ${auraScore(diags)} / 1000 - $errors error(s) to fix")
         }
-    }
-
-    private fun stableHash(fileName: String, line: Int, code: String): Int {
-        var h = 17
-        for (c in fileName) h = h * 31 + c.code
-        h = h * 31 + line
-        for (c in code) h = h * 31 + c.code
-        return h and 0x7fffffff
     }
 }

@@ -1,17 +1,17 @@
-gyatt count = 0
+beta count = 0
 
-drop site on 3000 bet
-    page("/") bet
+drop site on 3000 {
+    page("/") {
         bigyap("Counter")
         yap("Count: $count")
-        smash("Increment") does bet
+        smash("Increment") does {
             count gains 1
-        periodt
-        smash("Reset") does bet
+        }
+        smash("Reset") does {
             count = 0
-        periodt
-    periodt
-periodt
+        }
+    }
+}
 
 /* The same program in Kotlin (what Rotlin compiles this to):
 

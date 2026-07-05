@@ -9,12 +9,12 @@ import java.io.PrintStream
 import java.nio.file.Files
 import java.nio.file.Path
 
-/** `rotlin aura app.rot` - type-check only, roast the code, report the aura score. */
+/** `rotlin aura app.rot` - type-check only, report diagnostics and the aura score. */
 class AuraCommand(private val out: PrintStream = System.out) {
 
     fun run(file: Path): Int {
         if (!Files.exists(file)) {
-            out.println("can't find `$file` - that file is ghosting us")
+            out.println("can't find `$file` - no such file")
             return 1
         }
         val fileName = file.fileName.toString()
