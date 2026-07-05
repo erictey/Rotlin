@@ -10,12 +10,51 @@ fun Node.sexp(): String = when (this) {
     is TypeRef.Maybe -> "maybe ${inner.sexp()}"
     is Block -> "{${stmts.joinToString("; ") { it.sexp() }}}"
     is FunDecl -> buildString {
-        append("(fun $name (${params.joinToString(", ") { it.sexp() }})")
+        append("(")
+        if (gatekeep) append("gatekeep ")
+        if (remix) append("remix ")
+        append("fun $name (${params.joinToString(", ") { it.sexp() }})")
         returnType?.let { append(": ${it.sexp()}") }
-        append(" ${body.sexp()})")
+        body?.let { append(" ${it.sexp()}") }
+        append(")")
     }
+    is SigmaDecl -> buildString {
+        append("(sigma $name")
+        if (ctorParams.isNotEmpty()) {
+            append(" (")
+            append(ctorParams.joinToString(", ") { p ->
+                buildString {
+                    if (p.gatekeep) append("gatekeep ")
+                    when (p.kind) {
+                        CtorParamKind.RIZZ -> append("val ")
+                        CtorParamKind.GYATT -> append("var ")
+                        CtorParamKind.PLAIN -> {}
+                    }
+                    append("${p.name}: ${p.type.sexp()}")
+                }
+            })
+            append(")")
+        }
+        superRef?.let { append(" :${it.name}(${it.args.joinToString(", ") { a -> a.sexp() }})") }
+        if (vibes.isNotEmpty()) append(" ~${vibes.joinToString(",")}")
+        append(" {${members.joinToString("; ") { it.sexp() }}})")
+    }
+    is NpcDecl -> "(npc $name {${members.joinToString("; ") { it.sexp() }}})"
+    is VibeDecl -> "(vibe $name {${members.joinToString("; ") { it.sexp() }}})"
+    is VibecheckStmt -> buildString {
+        append("(when ${subject.sexp()}")
+        for (b in branches) {
+            append(" [")
+            append(b.values?.joinToString(", ") { it.sexp() } ?: "else")
+            append(" -> ${b.body.sexp()}]")
+        }
+        append(")")
+    }
+    is MogStmt -> "(for $varName in ${iterable.sexp()} ${body.sexp()})"
     is VarDecl -> buildString {
-        append("(${if (mutable) "var" else "val"} $name")
+        append("(")
+        if (gatekeep) append("gatekeep ")
+        append("${if (mutable) "var" else "val"} $name")
         declaredType?.let { append(": ${it.sexp()}") }
         append(" ${init.sexp()})")
     }
@@ -36,6 +75,8 @@ fun Node.sexp(): String = when (this) {
     is BoolLit -> value.toString()
     is GhostedLit -> "null"
     is NameRef -> name
+    is MeRef -> "me"
+    is IndexExpr -> "([] ${receiver.sexp()} ${index.sexp()})"
     is StringTmpl -> "(str ${parts.joinToString(" ") {
         when (it) {
             is TmplNode.Text -> "\"${it.raw}\""
@@ -47,4 +88,5 @@ fun Node.sexp(): String = when (this) {
     is Binary -> "(${op.kotlin} ${left.sexp()} ${right.sexp()})"
     is Unary -> "(${if (op == UnaryOp.NOT) "!" else "neg"} ${operand.sexp()})"
     is DeadassExpr -> "(deadass ${operand.sexp()})"
+    else -> error("no sexp rendering for $this") // CtorParam/SuperRef/VcBranch render inline
 }

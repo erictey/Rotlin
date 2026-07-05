@@ -149,6 +149,66 @@ class EmitterTest {
     }
 
     @Test
+    fun `sigma emits open class with modifiers mapped`() {
+        val src = """
+            sigma Dog(rizz name: lore) is a Animal vibes with Fetchable bet
+            gatekeep gyatt barks = 0
+            remix skibidi speak() spits lore bet
+            yeet "woof: " + me.name
+            periodt
+            skibidi bark() bet
+            barks gains 1
+            periodt
+            periodt
+        """.trimIndent()
+        val lines = emit(src).ktText.lines()
+        assertEquals("open class Dog(val name: String) : Animal(), Fetchable {", lines[2])
+        assertEquals("private var barks = 0", lines[3])
+        assertEquals("override fun speak(): String {", lines[4])
+        assertEquals("return \"woof: \" + this.name", lines[5])
+        assertEquals("}", lines[6])
+        assertEquals("open fun bark() {", lines[7])
+        assertEquals("barks += 1", lines[8])
+        assertEquals("}", lines[9])
+        assertEquals("}", lines[10])
+    }
+
+    @Test
+    fun `npc emits object and vibe emits interface`() {
+        val out = emit("npc Config bet\nrizz port = 3000\nperiodt\nvibe Fetchable bet\nskibidi fetch() spits lore\nperiodt\n")
+        val lines = out.ktText.lines()
+        assertEquals("object Config {", lines[2])
+        assertEquals("val port = 3000", lines[3])
+        assertEquals("}", lines[4])
+        assertEquals("interface Fetchable {", lines[5])
+        assertEquals("fun fetch(): String", lines[6])
+        assertEquals("}", lines[7])
+    }
+
+    @Test
+    fun `vibecheck emits when with inline and else branches`() {
+        val src = "vibecheck (x) bet\n1 -> yap(\"one\")\n2, 3 -> yap(\"few\")\nbruh -> yap(\"nah\")\nperiodt\n"
+        val lines = emit(src).ktText.lines()
+        assertEquals("fun main() { when (x) {", lines[2])
+        assertEquals("1 -> yap(\"one\")", lines[3])
+        assertEquals("2, 3 -> yap(\"few\")", lines[4])
+        assertEquals("else -> yap(\"nah\")", lines[5])
+        assertEquals("}", lines[6])
+        assertEquals("}", lines[7])
+    }
+
+    @Test
+    fun `mog emits for and index emits brackets`() {
+        val src = "rizz xs = squad(1, 2, 3)\nmog (x inside xs) bet\nyap(xs[0] + x)\nperiodt\n"
+        val lines = emit(src).ktText.lines()
+        assertEquals("val xs = squad(1, 2, 3)", lines[2])
+        assertEquals("fun main() { for (x in xs) {", lines[3])
+        assertEquals("yap(xs[0] + x)", lines[4])
+        assertEquals("}", lines[5])
+        assertEquals("}", lines[6])
+    }
+
+    @Test
     fun `ghosted emits null and based cringe emit booleans`() {
         val out = emit("rizz g = ghosted\nrizz t = based\nrizz f = cringe\n")
         val lines = out.ktText.lines()

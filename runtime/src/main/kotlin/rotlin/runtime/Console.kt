@@ -18,3 +18,7 @@ fun <T : Any> T?.deadass(): T =
 fun lore(x: Any?): String = x.toString()
 fun aura(x: Any?): Int? = if (x is Int) x else x?.toString()?.trim()?.toIntOrNull()
 fun ratio(x: Any?): Double? = if (x is Double) x else x?.toString()?.trim()?.toDoubleOrNull()
+
+// collection factories
+fun <T> squad(vararg items: T): MutableList<T> = mutableListOf(*items)
+fun <K, V> stash(): MutableMap<K, V> = mutableMapOf()

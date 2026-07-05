@@ -35,6 +35,8 @@ class KotlinEmitter {
 
     private val sb = StringBuilder()
     private var currentLine = 1
+    private var inClass = false
+    private var inInterface = false
 
     fun emit(program: Program): EmitOutput {
         sb.append("@file:JvmName(\"RotMain\")\n")
@@ -54,7 +56,9 @@ class KotlinEmitter {
         }
 
         // split: leading declarations stay top-level, rest wraps into main()
-        val firstStmtIdx = program.items.indexOfFirst { it !is FunDecl && it !is VarDecl }
+        val firstStmtIdx = program.items.indexOfFirst {
+            it !is FunDecl && it !is VarDecl && it !is SigmaDecl && it !is NpcDecl && it !is VibeDecl
+        }
         val topLevel = if (firstStmtIdx == -1) program.items else program.items.take(firstStmtIdx)
         val mainBody = if (firstStmtIdx == -1) emptyList() else program.items.drop(firstStmtIdx)
 
@@ -103,14 +107,98 @@ class KotlinEmitter {
                 anchor(stmt.line + PRELUDE_LINES)
                 val params = stmt.params.joinToString(", ") { "${escapeName(it.name)}: ${typeText(it.type)}" }
                 val ret = stmt.returnType?.let { ": ${typeText(it)}" } ?: ""
-                write("fun ${escapeName(stmt.name)}($params)$ret {")
-                emitBlockBody(stmt.body)
+                val mods = buildString {
+                    if (stmt.gatekeep) append("private ")
+                    when {
+                        stmt.remix -> append("override ")
+                        // all-open world: any class method can be remixed by a child
+                        inClass && !inInterface -> append("open ")
+                    }
+                }
+                write("${mods}fun ${escapeName(stmt.name)}($params)$ret")
+                if (stmt.body != null) {
+                    write(" {")
+                    emitBlockBody(stmt.body)
+                }
             }
             is VarDecl -> {
                 anchor(stmt.line + PRELUDE_LINES)
                 val kw = if (stmt.mutable) "var" else "val"
+                val gate = if (stmt.gatekeep) "private " else ""
                 val typed = stmt.declaredType?.let { ": ${typeText(it)}" } ?: ""
-                write("$kw ${escapeName(stmt.name)}$typed = ${exprText(stmt.init)}")
+                write("$gate$kw ${escapeName(stmt.name)}$typed = ${exprText(stmt.init)}")
+            }
+            is SigmaDecl -> {
+                anchor(stmt.line + PRELUDE_LINES)
+                val ctor = if (stmt.ctorParams.isEmpty()) "" else "(" + stmt.ctorParams.joinToString(", ") { p ->
+                    buildString {
+                        if (p.gatekeep) append("private ")
+                        when (p.kind) {
+                            CtorParamKind.RIZZ -> append("val ")
+                            CtorParamKind.GYATT -> append("var ")
+                            CtorParamKind.PLAIN -> {}
+                        }
+                        append("${escapeName(p.name)}: ${typeText(p.type)}")
+                    }
+                } + ")"
+                val supers = mutableListOf<String>()
+                stmt.superRef?.let { s ->
+                    supers += "${escapeName(s.name)}(${s.args.joinToString(", ") { exprText(it) }})"
+                }
+                supers += stmt.vibes.map { escapeName(it) }
+                val heritage = if (supers.isEmpty()) "" else " : " + supers.joinToString(", ")
+                write("open class ${escapeName(stmt.name)}$ctor$heritage {")
+                val saved = inClass
+                inClass = true
+                for (m in stmt.members) emitStmt(m)
+                inClass = saved
+                anchor(stmt.endLine + PRELUDE_LINES)
+                write("}")
+            }
+            is NpcDecl -> {
+                anchor(stmt.line + PRELUDE_LINES)
+                write("object ${escapeName(stmt.name)} {")
+                for (m in stmt.members) emitStmt(m)
+                anchor(stmt.endLine + PRELUDE_LINES)
+                write("}")
+            }
+            is VibeDecl -> {
+                anchor(stmt.line + PRELUDE_LINES)
+                write("interface ${escapeName(stmt.name)} {")
+                val savedClass = inClass
+                val savedIface = inInterface
+                inClass = true
+                inInterface = true
+                for (m in stmt.members) emitStmt(m)
+                inClass = savedClass
+                inInterface = savedIface
+                anchor(stmt.endLine + PRELUDE_LINES)
+                write("}")
+            }
+            is VibecheckStmt -> {
+                anchor(stmt.line + PRELUDE_LINES)
+                write("when (${exprText(stmt.subject)}) {")
+                for (b in stmt.branches) {
+                    anchor(b.line + PRELUDE_LINES)
+                    val head = b.values?.joinToString(", ") { exprText(it) } ?: "else"
+                    val single = b.body.stmts.singleOrNull()
+                    val inlineable = single != null && b.body.line == b.body.endLine &&
+                        (single is ExprStmt || single is Assign || single is VarDecl ||
+                            single is YeetStmt || single is DipStmt || single is SkipStmt)
+                    if (inlineable) {
+                        write("$head -> ${flatStmt(single!!)}")
+                    } else {
+                        write("$head -> {")
+                        emitBlockBody(b.body)
+                    }
+                }
+                anchor(stmt.endLine + PRELUDE_LINES)
+                write("}")
+            }
+            is MogStmt -> {
+                anchor(stmt.line + PRELUDE_LINES)
+                write("for (${escapeName(stmt.varName)} in ${exprText(stmt.iterable)}) {")
+                emitBlockBody(stmt.body)
             }
             is Assign -> {
                 anchor(stmt.line + PRELUDE_LINES)
@@ -193,12 +281,14 @@ class KotlinEmitter {
         write("}")
     }
 
-    /** Best-effort single-line statement text, for lambdas nested inside expressions. */
+    /** Best-effort single-line statement text, for inline when-branches and nested lambdas. */
     private fun flatStmt(stmt: Stmt): String = when (stmt) {
         is ExprStmt -> exprText(stmt.expr)
         is Assign -> "${exprText(stmt.target)} ${stmt.op.kotlin} ${exprText(stmt.value)}"
         is VarDecl -> "${if (stmt.mutable) "var" else "val"} ${escapeName(stmt.name)} = ${exprText(stmt.init)}"
         is YeetStmt -> if (stmt.value == null) "return" else "return ${exprText(stmt.value)}"
+        is DipStmt -> "break"
+        is SkipStmt -> "continue"
         else -> "Unit"
     }
 
@@ -226,6 +316,8 @@ class KotlinEmitter {
         is BoolLit -> expr.value.toString()
         is GhostedLit -> "null"
         is NameRef -> escapeName(expr.name)
+        is MeRef -> "this"
+        is IndexExpr -> "${render(expr.receiver, parenthesize = true)}[${exprText(expr.index)}]"
         is StringTmpl -> buildString {
             append('"')
             for (part in expr.parts) {

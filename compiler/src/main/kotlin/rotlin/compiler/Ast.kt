@@ -60,13 +60,16 @@ data class Block(
 
 sealed interface Stmt : Node
 
+/** [body] is null only for abstract signatures inside a `vibe`. */
 data class FunDecl(
     val name: String,
     val params: List<Param>,
     val returnType: TypeRef?,
-    val body: Block,
+    val body: Block?,
     override val line: Int,
     override val col: Int,
+    val gatekeep: Boolean = false,
+    val remix: Boolean = false,
 ) : Stmt
 
 data class VarDecl(
@@ -74,6 +77,85 @@ data class VarDecl(
     val name: String,
     val declaredType: TypeRef?,
     val init: Expr,
+    override val line: Int,
+    override val col: Int,
+    val gatekeep: Boolean = false,
+) : Stmt
+
+// ---- OOP ---------------------------------------------------------------------
+
+enum class CtorParamKind { PLAIN, RIZZ, GYATT }
+
+data class CtorParam(
+    val kind: CtorParamKind,
+    val gatekeep: Boolean,
+    val name: String,
+    val type: TypeRef,
+    override val line: Int,
+    override val col: Int,
+) : Node
+
+data class SuperRef(
+    val name: String,
+    val args: List<Expr>,
+    override val line: Int,
+    override val col: Int,
+) : Node
+
+/** `sigma Dog(rizz name: lore) is a Animal vibes with Fetchable bet ... periodt` */
+data class SigmaDecl(
+    val name: String,
+    val ctorParams: List<CtorParam>,
+    val superRef: SuperRef?,
+    val vibes: List<String>,
+    val members: List<Stmt>,
+    val endLine: Int,
+    override val line: Int,
+    override val col: Int,
+) : Stmt
+
+/** `npc Config bet ... periodt` — a singleton. */
+data class NpcDecl(
+    val name: String,
+    val members: List<Stmt>,
+    val endLine: Int,
+    override val line: Int,
+    override val col: Int,
+) : Stmt
+
+/** `vibe Fetchable bet ... periodt` — an interface. */
+data class VibeDecl(
+    val name: String,
+    val members: List<Stmt>,
+    val endLine: Int,
+    override val line: Int,
+    override val col: Int,
+) : Stmt
+
+// ---- control flow ---------------------------------------------------------------
+
+/** One `values -> body` arm; [values] null means the `bruh ->` default arm. */
+data class VcBranch(
+    val values: List<Expr>?,
+    val body: Block,
+    override val line: Int,
+    override val col: Int,
+) : Node
+
+/** `vibecheck (x) bet ... periodt` — when/switch. */
+data class VibecheckStmt(
+    val subject: Expr,
+    val branches: List<VcBranch>,
+    val endLine: Int,
+    override val line: Int,
+    override val col: Int,
+) : Stmt
+
+/** `mog (item inside things) bet ... periodt` — for-in. */
+data class MogStmt(
+    val varName: String,
+    val iterable: Expr,
+    val body: Block,
     override val line: Int,
     override val col: Int,
 ) : Stmt
@@ -129,6 +211,17 @@ data class DoubleLit(val text: String, override val line: Int, override val col:
 data class BoolLit(val value: Boolean, override val line: Int, override val col: Int) : Expr
 data class GhostedLit(override val line: Int, override val col: Int) : Expr
 data class NameRef(val name: String, override val line: Int, override val col: Int) : Expr
+
+/** `me` — this. */
+data class MeRef(override val line: Int, override val col: Int) : Expr
+
+/** `xs[i]` — indexing. */
+data class IndexExpr(
+    val receiver: Expr,
+    val index: Expr,
+    override val line: Int,
+    override val col: Int,
+) : Expr
 
 sealed interface TmplNode {
     data class Text(val raw: String) : TmplNode

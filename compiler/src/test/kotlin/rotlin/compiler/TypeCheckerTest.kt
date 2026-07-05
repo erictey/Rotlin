@@ -190,6 +190,64 @@ class TypeCheckerTest {
         assertClean("grind (based) bet\ndip\nperiodt\n")
     }
 
+    // ---- oop ----
+
+    @Test
+    fun `constructor calls check arity and types`() {
+        val cls = "sigma Dog(rizz name: lore) bet\nperiodt\n"
+        assertEquals(listOf("E_ARITY"), errorCodes("${cls}rizz d = Dog()\n"))
+        assertEquals(listOf("E_TYPE_MISMATCH"), errorCodes("${cls}rizz d = Dog(5)\n"))
+        assertClean("${cls}rizz d = Dog(\"rex\")\nyap(d.name)\n")
+    }
+
+    @Test
+    fun `me outside a sigma is an error`() {
+        assertEquals(listOf("E_ME_NOWHERE"), errorCodes("yap(me)\n"))
+    }
+
+    @Test
+    fun `methods see ctor props through me`() {
+        assertClean(
+            "sigma Dog(rizz name: lore) bet\nskibidi intro() spits lore bet\nyeet \"i am \" + me.name\nperiodt\nperiodt\n",
+        )
+    }
+
+    // ---- squads, stashes, mog ----
+
+    @Test
+    fun `squad elements infer and mixed squads roast`() {
+        assertClean("rizz xs = squad(1, 2, 3)\nyap(xs[0] + 1)\n")
+        assertEquals(listOf("E_TYPE_MISMATCH"), errorCodes("rizz xs = squad(1, \"two\")\n"))
+    }
+
+    @Test
+    fun `stash indexing returns a maybe`() {
+        // m["k"] might be ghosted - using it raw as a number is the teaching moment
+        val diags = check("gyatt m: stash<lore, aura> = stash()\nrizz v = m[\"k\"]\nyap(v + 1)\n")
+        assertTrue(diags.all.any { it.code == "E_MIXED_NUMBERS" || it.code == "E_TYPE_MISMATCH" })
+        assertClean("gyatt m: stash<lore, aura> = stash()\nyap((m[\"k\"] otherwise 0) + 1)\n")
+    }
+
+    @Test
+    fun `mog over a squad types the loop variable`() {
+        assertClean("rizz xs = squad(1, 2)\nmog (x inside xs) bet\nyap(x + 1)\nperiodt\n")
+        assertClean("mog (i inside 1 through 5) bet\nyap(i * 2)\nperiodt\n")
+    }
+
+    @Test
+    fun `mog over something unloopable roasts`() {
+        assertEquals(listOf("E_TYPE_MISMATCH"), errorCodes("mog (x inside 5) bet\nperiodt\n"))
+    }
+
+    @Test
+    fun `vibecheck branch values must match the subject`() {
+        assertEquals(
+            listOf("E_TYPE_MISMATCH"),
+            errorCodes("rizz x = 5\nvibecheck (x) bet\n\"one\" -> yap(1)\nperiodt\n"),
+        )
+        assertClean("rizz x = 5\nvibecheck (x) bet\n1 -> yap(1)\nbruh -> yap(0)\nperiodt\n")
+    }
+
     // ---- web dsl scoping ----
 
     @Test

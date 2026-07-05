@@ -49,6 +49,16 @@ sealed interface RType {
     object UnknownT : RType {
         override fun display() = "???"
     }
+
+    /** A `1 through 10` range. */
+    object RangeT : RType {
+        override fun display() = "range"
+    }
+
+    /** An instance of a user sigma/npc. Members type as Unknown; kotlinc backstops. */
+    data class ClassT(val name: String) : RType {
+        override fun display() = name
+    }
 }
 
 /** True when a value of [from] can be used where [to] is expected. */
@@ -58,5 +68,10 @@ fun assignable(from: RType, to: RType): Boolean = when {
         (from is RType.MaybeT && assignable(from.inner, to.inner))
     from is RType.GhostT -> false // ghost only fits into maybe
     from is RType.MaybeT -> false // maybe doesn't fit a definite slot
+    from is RType.SquadT && to is RType.SquadT -> assignable(from.elem, to.elem)
+    from is RType.StashT && to is RType.StashT ->
+        assignable(from.key, to.key) && assignable(from.value, to.value)
+    // class hierarchies live in kotlinc's head, not ours - stay permissive
+    from is RType.ClassT && to is RType.ClassT -> true
     else -> from == to
 }

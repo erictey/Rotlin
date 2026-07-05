@@ -206,6 +206,82 @@ class ParserTest {
         assertEquals("(if x {(call yap 1)})", program.sexp())
     }
 
+    // ---- oop ----
+
+    @Test
+    fun `sigma with ctor props inheritance and vibes`() {
+        assertEquals(
+            "(sigma Dog (val name: lore, age: aura) :Animal() ~Fetchable,Petable " +
+                "{(remix fun speak (): lore {(return (str \"woof\"))})})",
+            sexp(
+                "sigma Dog(rizz name: lore, age: aura) is a Animal vibes with Fetchable, Petable bet\n" +
+                    "remix skibidi speak() spits lore bet\nyeet \"woof\"\nperiodt\nperiodt",
+            ),
+        )
+    }
+
+    @Test
+    fun `sigma with super constructor args`() {
+        assertEquals(
+            "(sigma Puppy :Dog((str \"rex\")) {})",
+            sexp("sigma Puppy() is a Dog(\"rex\") bet\nperiodt"),
+        )
+    }
+
+    @Test
+    fun `npc and vibe declarations`() {
+        assertEquals("(npc Config {(val port 3000)})", sexp("npc Config bet\nrizz port = 3000\nperiodt"))
+        assertEquals(
+            "(vibe Fetchable {(fun fetch (): lore)})",
+            sexp("vibe Fetchable bet\nskibidi fetch() spits lore\nperiodt"),
+        )
+    }
+
+    @Test
+    fun `gatekeep members and me references`() {
+        assertEquals(
+            "(sigma A {(gatekeep val secret 5); (fun expose (): aura {(return (. me secret))})})",
+            sexp("sigma A() bet\ngatekeep rizz secret = 5\nskibidi expose() spits aura bet\nyeet me.secret\nperiodt\nperiodt"),
+        )
+    }
+
+    // ---- control flow ----
+
+    @Test
+    fun `vibecheck with values lists and bruh default`() {
+        assertEquals(
+            "(when x [1 -> {(call yap (str \"one\"))}] [2, 3 -> {(call yap (str \"few\"))}] " +
+                "[else -> {(call yap (str \"many\"))}])",
+            sexp("vibecheck (x) bet\n1 -> yap(\"one\")\n2, 3 -> yap(\"few\")\nbruh -> yap(\"many\")\nperiodt"),
+        )
+    }
+
+    @Test
+    fun `vibecheck branch can be a block`() {
+        assertEquals(
+            "(when x [1 -> {(call yap 1); (call yap 2)}])",
+            sexp("vibecheck (x) bet\n1 -> bet\nyap(1)\nyap(2)\nperiodt\nperiodt"),
+        )
+    }
+
+    @Test
+    fun `mog over squads and ranges`() {
+        assertEquals(
+            "(for item in (call squad 1 2) {(call yap item)})",
+            sexp("mog (item inside squad(1, 2)) bet\nyap(item)\nperiodt"),
+        )
+        assertEquals(
+            "(for i in (.. 1 3) {(call yap i)})",
+            sexp("mog (i inside 1 through 3) bet\nyap(i)\nperiodt"),
+        )
+    }
+
+    @Test
+    fun `indexing parses and can be assigned`() {
+        assertEquals("([] xs 0)", exprSexp("xs[0]"))
+        assertEquals("(= ([] xs 0) 5)", sexp("xs[0] = 5"))
+    }
+
     // ---- error recovery ----
 
     @Test

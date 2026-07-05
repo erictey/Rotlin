@@ -47,6 +47,17 @@ class CookE2eTest {
     }
 
     @Test
+    fun `quiz example with classes vibecheck and mog runs`() {
+        val src = Files.readString(Paths.get("..", "examples", "quiz.rot"))
+        val run = cook(src)
+        assertEquals(0, run.exitCode, "diagnostics: ${run.diag}")
+        assertContains(run.stdout, "what does rizz declare?")
+        assertContains(run.stdout, "wrong, L")
+        assertContains(run.stdout, "correct, W")
+        assertContains(run.stdout, "final verdict: mid")
+    }
+
+    @Test
     fun `rotlin parse error reports rot line and skips kotlinc`() {
         val run = cook("rizz a = 1\nsus (a == 1) bet\nyap(a)\nperiodt\n")
         assertNotEquals(0, run.exitCode)

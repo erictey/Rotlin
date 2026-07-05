@@ -168,7 +168,17 @@ class Parser(rawTokens: List<Token>, private val diags: DiagnosticBag) {
             DIP -> advance().let { val s = DipStmt(it.line, it.col); expectStmtEnd(); s }
             SKIP -> advance().let { val s = SkipStmt(it.line, it.col); expectStmtEnd(); s }
             DROP -> parseDropSite()
-            SIGMA, NPC, VIBE, MOG, VIBECHECK, FINNA, CRASHOUT -> {
+            SIGMA -> parseSigma()
+            NPC -> parseNpc()
+            VIBE -> parseVibe()
+            VIBECHECK -> parseVibecheck()
+            MOG -> parseMog()
+            GATEKEEP, REMIX -> {
+                error("E_MODIFIER_NOWHERE", "`${peek().text}` only makes sense inside a sigma/npc/vibe",
+                    peek(), hint = "move this into a class body")
+                synchronize(); null
+            }
+            FINNA, CRASHOUT -> {
                 error("E_NOT_YET", "`${peek().text}` isn't in this build yet - coming soon fr",
                     peek())
                 synchronize(); null
@@ -183,7 +193,11 @@ class Parser(rawTokens: List<Token>, private val diags: DiagnosticBag) {
         }
     }
 
-    private fun parseFunDecl(): Stmt? {
+    private fun parseFunDecl(
+        gatekeep: Boolean = false,
+        remix: Boolean = false,
+        allowNoBody: Boolean = false,
+    ): Stmt? {
         val kw = advance()
         val name = expect(IDENT, "a function name after `skibidi`") ?: run { synchronize(); return null }
         expect(LPAREN, "`(` after the function name") ?: run { synchronize(); return null }
@@ -198,11 +212,15 @@ class Parser(rawTokens: List<Token>, private val diags: DiagnosticBag) {
         }
         expect(RPAREN, "`)` to close the parameter list")
         val returnType = if (at(SPITS)) { advance(); parseType() } else null
+        if (allowNoBody && !at(BET)) {
+            expectStmtEnd()
+            return FunDecl(name.text, params, returnType, null, kw.line, kw.col, gatekeep, remix)
+        }
         val body = parseBlock() ?: return null
-        return FunDecl(name.text, params, returnType, body, kw.line, kw.col)
+        return FunDecl(name.text, params, returnType, body, kw.line, kw.col, gatekeep, remix)
     }
 
-    private fun parseVarDecl(): Stmt? {
+    private fun parseVarDecl(gatekeep: Boolean = false): Stmt? {
         val kw = advance()
         val mutable = kw.type == GYATT
         val name = expect(IDENT, "a name after `${kw.text}`") ?: run { synchronize(); return null }
@@ -211,7 +229,171 @@ class Parser(rawTokens: List<Token>, private val diags: DiagnosticBag) {
         expect(ASSIGN, "`=` and a starting value (every ${kw.text} needs one)") ?: run { synchronize(); return null }
         val init = parseExpression() ?: run { synchronize(); return null }
         expectStmtEnd()
-        return VarDecl(mutable, name.text, declared, init, kw.line, kw.col)
+        return VarDecl(mutable, name.text, declared, init, kw.line, kw.col, gatekeep)
+    }
+
+    // ---- oop ---------------------------------------------------------------
+
+    private fun parseSigma(): Stmt? {
+        val kw = advance()
+        val name = expect(IDENT, "a name after `sigma`") ?: run { synchronize(); return null }
+
+        val ctorParams = mutableListOf<CtorParam>()
+        if (at(LPAREN)) {
+            advance(); skipNewlines()
+            while (!at(RPAREN) && !at(EOF)) {
+                var gk = false
+                var kind = CtorParamKind.PLAIN
+                loop@ while (true) {
+                    when (peek().type) {
+                        GATEKEEP -> { advance(); gk = true }
+                        RIZZ -> { advance(); kind = CtorParamKind.RIZZ }
+                        GYATT -> { advance(); kind = CtorParamKind.GYATT }
+                        else -> break@loop
+                    }
+                }
+                val pn = expect(IDENT, "a constructor parameter name") ?: break
+                expect(COLON, "`:` and a type for `${pn.text}`") ?: break
+                val pt = parseType() ?: break
+                ctorParams += CtorParam(kind, gk, pn.text, pt, pn.line, pn.col)
+                skipNewlines()
+                if (at(COMMA)) { advance(); skipNewlines() } else break
+            }
+            expect(RPAREN, "`)` to close the constructor")
+        }
+
+        var superRef: SuperRef? = null
+        if (at(IS_A)) {
+            val t = advance()
+            val sn = expect(IDENT, "the parent after `is a`") ?: run { synchronize(); return null }
+            val args = mutableListOf<Expr>()
+            if (at(LPAREN)) {
+                advance()
+                while (!at(RPAREN) && !at(EOF)) {
+                    args += parseExpression() ?: break
+                    if (at(COMMA)) advance() else break
+                }
+                expect(RPAREN, "`)` to close the parent's arguments")
+            }
+            superRef = SuperRef(sn.text, args, t.line, t.col)
+        }
+
+        val vibes = mutableListOf<String>()
+        if (at(VIBES_WITH)) {
+            advance()
+            while (true) {
+                vibes += (expect(IDENT, "a vibe name after `vibes with`") ?: break).text
+                if (at(COMMA)) advance() else break
+            }
+        }
+
+        val (members, endLine) = parseMemberBlock("sigma ${name.text}") ?: return null
+        return SigmaDecl(name.text, ctorParams, superRef, vibes, members, endLine, kw.line, kw.col)
+    }
+
+    private fun parseNpc(): Stmt? {
+        val kw = advance()
+        val name = expect(IDENT, "a name after `npc`") ?: run { synchronize(); return null }
+        val (members, endLine) = parseMemberBlock("npc ${name.text}") ?: return null
+        return NpcDecl(name.text, members, endLine, kw.line, kw.col)
+    }
+
+    private fun parseVibe(): Stmt? {
+        val kw = advance()
+        val name = expect(IDENT, "a name after `vibe`") ?: run { synchronize(); return null }
+        val (members, endLine) = parseMemberBlock("vibe ${name.text}", allowAbstract = true) ?: return null
+        return VibeDecl(name.text, members, endLine, kw.line, kw.col)
+    }
+
+    /** Parses `bet ... periodt` allowing only rizz/gyatt/skibidi members (with modifiers). */
+    private fun parseMemberBlock(owner: String, allowAbstract: Boolean = false): Pair<List<Stmt>, Int>? {
+        skipNewlines()
+        val bet = expect(BET, "`bet` to open $owner") ?: run { synchronize(); return null }
+        val members = mutableListOf<Stmt>()
+        while (true) {
+            skipNewlines()
+            if (at(PERIODT)) break
+            if (at(EOF)) {
+                error("E_UNCLOSED_BLOCK", "$owner never got its `periodt`", bet,
+                    hint = "close it with `periodt`")
+                return members to peek().line
+            }
+            var gk = false
+            var rx = false
+            while (at(GATEKEEP) || at(REMIX)) {
+                if (at(GATEKEEP)) gk = true else rx = true
+                advance()
+            }
+            when (peek().type) {
+                RIZZ, GYATT -> parseVarDecl(gatekeep = gk)?.let { members += it }
+                SKIBIDI -> parseFunDecl(gatekeep = gk, remix = rx, allowNoBody = allowAbstract)?.let { members += it }
+                else -> {
+                    error("E_CLASS_MEMBER", "only rizz, gyatt and skibidi live inside $owner", peek(),
+                        hint = "put other code inside a skibidi method")
+                    synchronize()
+                }
+            }
+        }
+        val periodt = advance()
+        return members to periodt.line
+    }
+
+    // ---- control flow --------------------------------------------------------
+
+    private fun parseVibecheck(): Stmt? {
+        val kw = advance()
+        expect(LPAREN, "`(` after `vibecheck`")
+        val subject = parseExpression() ?: run { synchronize(); return null }
+        expect(RPAREN, "`)` after the value")
+        skipNewlines()
+        expect(BET, "`bet` to open the vibecheck") ?: run { synchronize(); return null }
+
+        val branches = mutableListOf<VcBranch>()
+        while (true) {
+            skipNewlines()
+            if (at(PERIODT) || at(EOF)) break
+            val startTok = peek()
+
+            val values: List<Expr>?
+            if (at(BRUH)) {
+                advance()
+                values = null
+            } else {
+                val vs = mutableListOf<Expr>()
+                while (true) {
+                    vs += parseExpression() ?: break
+                    if (at(COMMA)) advance() else break
+                }
+                if (vs.isEmpty()) { synchronize(); continue }
+                values = vs
+            }
+            if (expect(ARROW, "`->` after the value(s)") == null) { synchronize(); continue }
+            if (!at(BET) && peek().type in setOf(SUS, GRIND, MOG, VIBECHECK, SIGMA, NPC, VIBE, DROP)) {
+                error("E_BRANCH_BET", "multi-line branches need their own block", peek(),
+                    hint = "write `-> bet` and close with `periodt`")
+                synchronize(); continue
+            }
+            val body: Block = if (at(BET)) {
+                parseBlock() ?: continue
+            } else {
+                val s = parseStmt() ?: continue
+                Block(listOf(s), s.line, s.col, s.line)
+            }
+            branches += VcBranch(values, body, startTok.line, startTok.col)
+        }
+        val endTok = if (at(PERIODT)) advance() else peek()
+        return VibecheckStmt(subject, branches, endTok.line, kw.line, kw.col)
+    }
+
+    private fun parseMog(): Stmt? {
+        val kw = advance()
+        expect(LPAREN, "`(` after `mog`")
+        val v = expect(IDENT, "a loop name - like `mog (item inside things)`") ?: run { synchronize(); return null }
+        expect(INSIDE, "`inside` after `${v.text}`") ?: run { synchronize(); return null }
+        val iterable = parseExpression() ?: run { synchronize(); return null }
+        expect(RPAREN, "`)` to close the mog")
+        val body = parseBlock() ?: return null
+        return MogStmt(v.text, iterable, body, kw.line, kw.col)
     }
 
     private fun parseSus(): Stmt? {
@@ -283,7 +465,7 @@ class Parser(rawTokens: List<Token>, private val diags: DiagnosticBag) {
             return ExprStmt(expr, start.line, start.col)
         }
         val opTok = advance()
-        if (expr !is NameRef && expr !is MemberAccess) {
+        if (expr !is NameRef && expr !is MemberAccess && expr !is IndexExpr) {
             error("E_BAD_ASSIGN", "you can't assign to that", opTok,
                 hint = "put a variable name on the left of `${opTok.text}`")
         }
@@ -480,6 +662,7 @@ class Parser(rawTokens: List<Token>, private val diags: DiagnosticBag) {
                     skipNewlines()
                     while (!at(RPAREN) && !at(EOF)) {
                         args += parseExpression() ?: break
+                        skipNewlines() // the closing `)` may sit on its own line
                         if (at(COMMA)) { advance(); skipNewlines() } else break
                     }
                     expect(RPAREN, "`)` to close the call")
@@ -503,6 +686,12 @@ class Parser(rawTokens: List<Token>, private val diags: DiagnosticBag) {
                     val t = advance()
                     DeadassExpr(expr, t.line, t.col)
                 }
+                LBRACKET -> {
+                    val t = advance()
+                    val index = parseExpression() ?: return expr
+                    expect(RBRACKET, "`]` to close the index")
+                    IndexExpr(expr, index, t.line, t.col)
+                }
                 else -> return expr
             }
         }
@@ -516,6 +705,7 @@ class Parser(rawTokens: List<Token>, private val diags: DiagnosticBag) {
             BASED -> { advance(); BoolLit(true, t.line, t.col) }
             CRINGE -> { advance(); BoolLit(false, t.line, t.col) }
             GHOSTED -> { advance(); GhostedLit(t.line, t.col) }
+            ME -> { advance(); MeRef(t.line, t.col) }
             IDENT -> { advance(); NameRef(t.text, t.line, t.col) }
             STRING_TMPL -> {
                 advance()
