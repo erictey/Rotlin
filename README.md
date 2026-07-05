@@ -36,7 +36,7 @@ including JVM runtime crashes - back to your `.rot` line.
 
 1. Grab `rotlin.zip` from the [Releases page](../../releases) and unzip it.
 2. Install a JDK 21+ (see below) if you don't have one.
-3. Double-click the installer for your machine:
+3. Double-click the installer for your machine (found in the /packaging folder):
    - **Windows** - `installWin.bat`
    - **macOS** - `installMac.command`
    - **Linux** - run `bash installLinux.sh`
