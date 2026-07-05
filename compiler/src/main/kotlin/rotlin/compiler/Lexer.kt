@@ -12,7 +12,7 @@ data class LexResult(val tokens: List<Token>, val diagnostics: DiagnosticBag)
  */
 class Lexer(src: String) {
 
-    private val src = src.replace("\r\n", "\n").replace('\r', '\n')
+    private val src = src.removePrefix("﻿").replace("\r\n", "\n").replace('\r', '\n')
     private var pos = 0
     private var line = 1
     private var col = 1

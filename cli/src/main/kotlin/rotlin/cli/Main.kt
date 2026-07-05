@@ -1,5 +1,6 @@
 package rotlin.cli
 
+import rotlin.cli.commands.AuraCommand
 import rotlin.cli.commands.CookCommand
 import rotlin.cli.commands.DropCommand
 import java.nio.file.Paths
@@ -9,8 +10,8 @@ private const val USAGE = """
 rotlin - the brainrot programming language
 
   rotlin cook <file.rot>   compile + run a console program
-  rotlin drop <file.rot>   serve a web program with hot reload (soon)
-  rotlin aura <file.rot>   check your code, get your aura score (soon)
+  rotlin drop <file.rot>   serve a web program with hot reload
+  rotlin aura <file.rot>   check your code, get your aura score
 """
 
 fun main(args: Array<String>) {
@@ -22,6 +23,7 @@ fun main(args: Array<String>) {
     val exit = when (args[0]) {
         "cook" -> CookCommand().run(file)
         "drop" -> DropCommand().run(file)
+        "aura" -> AuraCommand().run(file)
         else -> {
             println("unknown command `${args[0]}` - that's not a thing yet")
             println(USAGE.trim())

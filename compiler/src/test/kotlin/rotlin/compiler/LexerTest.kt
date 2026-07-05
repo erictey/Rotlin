@@ -33,6 +33,12 @@ class LexerTest {
     }
 
     @Test
+    fun `utf-8 BOM is ignored`() {
+        // Notepad and PowerShell love to prepend BOMs; kids will hit this
+        assertEquals(listOf(RIZZ, IDENT, ASSIGN, INT_LIT), types("﻿rizz a = 1"))
+    }
+
+    @Test
     fun `crlf and lf lex identically`() {
         val lf = lex("rizz a = 1\nrizz b = 2\n").tokens.map { it.type }
         val crlf = lex("rizz a = 1\r\nrizz b = 2\r\n").tokens.map { it.type }

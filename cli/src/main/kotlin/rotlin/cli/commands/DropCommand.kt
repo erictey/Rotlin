@@ -3,10 +3,11 @@ package rotlin.cli.commands
 import rotlin.cli.ClasspathLocator
 import rotlin.cli.KotlinCompilerFacade
 import rotlin.cli.Runner
+import rotlin.cli.Term
 import rotlin.cli.Watcher
 import rotlin.compiler.CompilerDriver
-import rotlin.compiler.Diagnostic
 import rotlin.compiler.LineMap
+import rotlin.compiler.RoastRenderer
 import rotlin.runtime.DevHost
 import rotlin.runtime.DevHostImpl
 import java.io.PrintStream
@@ -51,8 +52,10 @@ class DropCommand(private val err: PrintStream = System.err) {
             val result = CompilerDriver.compile(source)
             val output = result.output
             if (result.diagnostics.hasErrors || output == null) {
-                val text = result.diagnostics.all.joinToString("\n") { renderDiag(fileName, it) }
-                err.println(text)
+                val text = RoastRenderer.renderAll(fileName, source, result.diagnostics) +
+                    "\n\n" + RoastRenderer.auraSummary(result.diagnostics)
+                err.println(RoastRenderer.renderAll(fileName, source, result.diagnostics, Term.color))
+                err.println(RoastRenderer.auraSummary(result.diagnostics, Term.color))
                 host.broadcastRoast("MID CODE DETECTED\n$text")
                 return false
             }
@@ -113,10 +116,5 @@ class DropCommand(private val err: PrintStream = System.err) {
             }
         }
         return null
-    }
-
-    private fun renderDiag(fileName: String, d: Diagnostic): String = buildString {
-        append("[$fileName line ${d.line}] ${d.message}")
-        d.hint?.let { append("\n  fix: $it") }
     }
 }
