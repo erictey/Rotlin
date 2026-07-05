@@ -23,10 +23,7 @@ to fix it.
 
 ## Why
 
-Target audience: low-attention-span kids who want to make things. The
-pitch: instant dopamine (a webpage you can show people), real concepts
-(static types, null safety, OOP, inheritance) hiding under meme words,
-and error messages that teach instead of terrify.
+When you find the answer. Let me know.
 
 This is **not** a token swapper. Rotlin has its own line-oriented block
 syntax, word operators (`is`, `aint`, `gains`), its own type checker
@@ -165,9 +162,8 @@ The emitter keeps generated Kotlin line-aligned with the source
 (`rot line = kt line − 2`), so kotlinc diagnostics **and** runtime stack
 traces map back to `.rot` lines by subtraction.
 
-Diagnostics are the product: every error is a plain-Kotlin-style
-message + a concrete fix, and a clean compile is worth
-`+1000 aura. Compiled with no errors and no warnings.`
+Diagnostics: every error is a Kotlin-style
+message + a concrete fix, and a clean compile gives you aura.
 
 ## Tests
 
