@@ -1,20 +1,48 @@
 summon kotlin.math.PI
 
 skibidi greet(name: lore) spits lore bet
-    yeet "sup " + name
+    yeet "Hello, " + name
 periodt
 
 gyatt count = 0
 grind (count flops 3) bet
-    yap("skibidi number $count")
+    yap("Number $count")
     count gains 1
 periodt
 
 sus (count twins 3) bet
-    yap("based")
+    yap("Loop finished")
 bruh bet
-    yap("cringe")
+    yap("Still looping")
 periodt
 
-yap(greet("rizzlord"))
+yap(greet("World"))
 yap("PI is $PI")
+
+/* The same program in Kotlin (what Rotlin compiles this to.
+   `yap` is a Rotlin runtime helper - think println):
+
+import rotlin.runtime.*
+import kotlin.math.PI
+
+fun greet(name: String): String {
+    return "Hello, " + name
+}
+
+var count = 0
+fun main() {
+    while (count < 3) {
+        yap("Number ${count}")
+        count += 1
+    }
+
+    if (count == 3) {
+        yap("Loop finished")
+    } else {
+        yap("Still looping")
+    }
+
+    yap(greet("World"))
+    yap("PI is ${PI}")
+}
+*/

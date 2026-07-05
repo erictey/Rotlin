@@ -319,7 +319,7 @@ class KotlinEmitter {
 
     private fun exprText(expr: Expr): String = render(expr, parenthesize = false)
 
-    /** Operands wrap binaries/unaries in parens — cheap, same-line, semantics-proof. */
+    /** Operands wrap binaries/unaries in parens - cheap, same-line, semantics-proof. */
     private fun operand(expr: Expr): String = render(expr, parenthesize = true)
 
     private fun render(expr: Expr, parenthesize: Boolean): String = when (expr) {

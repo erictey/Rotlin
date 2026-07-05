@@ -36,11 +36,11 @@ class CookE2eTest {
         val run = cook(src)
         assertEquals(0, run.exitCode, "diagnostics: ${run.diag}")
         val expected = listOf(
-            "skibidi number 0",
-            "skibidi number 1",
-            "skibidi number 2",
-            "based",
-            "sup rizzlord",
+            "Number 0",
+            "Number 1",
+            "Number 2",
+            "Loop finished",
+            "Hello, World",
             "PI is 3.141592653589793",
         ).joinToString(System.lineSeparator(), postfix = System.lineSeparator())
         assertEquals(expected, run.stdout)
@@ -51,10 +51,10 @@ class CookE2eTest {
         val src = Files.readString(Paths.get("..", "examples", "quiz.rot"))
         val run = cook(src)
         assertEquals(0, run.exitCode, "diagnostics: ${run.diag}")
-        assertContains(run.stdout, "what does rizz declare?")
-        assertContains(run.stdout, "wrong, L")
-        assertContains(run.stdout, "correct, W")
-        assertContains(run.stdout, "final verdict: mid")
+        assertContains(run.stdout, "What is 2 + 2?")
+        assertContains(run.stdout, "wrong")
+        assertContains(run.stdout, "correct")
+        assertContains(run.stdout, "Final score: 1")
     }
 
     @Test
@@ -67,7 +67,7 @@ class CookE2eTest {
 
     @Test
     fun `kotlinc-only error maps back to the rot line`() {
-        // `nope` is undefined — phase 1 has no typechecker, so kotlinc catches it
+        // `nope` is undefined - phase 1 has no typechecker, so kotlinc catches it
         val run = cook("rizz a = 1\nyap(nope)\n")
         assertNotEquals(0, run.exitCode)
         assertContains(run.diag, "line 2")

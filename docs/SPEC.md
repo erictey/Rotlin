@@ -4,7 +4,7 @@ File extension: `.rot`. One statement per line. Blocks: `bet` … `periodt`.
 Comments: `//` line, `/* */` nesting block. Strings: `"..."` with `$name`
 and `${expr}` interpolation. UTF-8 (BOM tolerated).
 
-## Keywords → Kotlin
+## Keywords to Kotlin
 
 | Rotlin | Kotlin | | Rotlin | Kotlin |
 |---|---|---|---|---|
@@ -51,14 +51,14 @@ Word operators (symbol forms are compile errors with a fix hint):
 | `x deadass` | `x!!` (runtime: "caught in 4k") | | `?.` | `?.` (kept) |
 
 Arithmetic stays symbolic: `+ - * / % = ( ) [ ]`. Precedence mirrors
-Kotlin exactly. `aura` and `ratio` never mix implicitly — convert with
+Kotlin exactly. `aura` and `ratio` never mix implicitly - convert with
 `ratio(x)` / `aura(x)` / `lore(x)`.
 
 ## Null safety
 
 - `ghosted` fits only `maybe T` slots.
 - Member access on a `maybe` needs `?.`, a `sus (x aint ghosted)` check
-  (smart cast; `rizz`/params only — `gyatt` can flip, so it never narrows),
+  (smart cast; `rizz`/params only - `gyatt` can flip, so it never narrows),
   or `deadass`.
 - `stash[key]` returns `maybe V`.
 
@@ -92,7 +92,7 @@ compile: `+1000 aura. W code, no cap.`
 
 ## Compilation model
 
-`.rot` → lex → parse → typecheck → line-aligned Kotlin
-(`rot line = kt line − 2`) → `kotlin-compiler-embeddable` (pinned 2.4.0)
-→ JVM classes → run in-process. kotlinc is the backstop for anything the
-Rotlin checker types as Unknown (all JVM interop).
+`.rot` is lexed, parsed, typechecked, and emitted as line-aligned Kotlin
+(`rot line = kt line − 2`), then compiled by `kotlin-compiler-embeddable`
+(pinned 2.4.0) to JVM classes and run in-process. kotlinc is the backstop
+for anything the Rotlin checker types as Unknown (all JVM interop).

@@ -9,7 +9,7 @@ import java.util.concurrent.Executors
 
 /**
  * Routes GET renders and smash-button clicks for a swappable SiteSpec.
- * Handlers run under one lock — kids never meet a race condition.
+ * Handlers run under one lock - kids never meet a race condition.
  */
 internal class SiteRouter(
     private val devMode: Boolean,
@@ -105,7 +105,7 @@ internal class SiteRouter(
     }
 }
 
-/** Blocks forever serving [spec] — the `rotlin cook` path for web programs. */
+/** Blocks forever serving [spec] - the `rotlin cook` path for web programs. */
 internal class StandaloneServer(private val spec: SiteSpec) {
 
     fun serveForever(): Nothing {

@@ -114,7 +114,7 @@ data class SigmaDecl(
     override val col: Int,
 ) : Stmt
 
-/** `npc Config bet ... periodt` — a singleton. */
+/** `npc Config bet ... periodt` - a singleton. */
 data class NpcDecl(
     val name: String,
     val members: List<Stmt>,
@@ -123,7 +123,7 @@ data class NpcDecl(
     override val col: Int,
 ) : Stmt
 
-/** `vibe Fetchable bet ... periodt` — an interface. */
+/** `vibe Fetchable bet ... periodt` - an interface. */
 data class VibeDecl(
     val name: String,
     val members: List<Stmt>,
@@ -142,7 +142,7 @@ data class VcBranch(
     override val col: Int,
 ) : Node
 
-/** `vibecheck (x) bet ... periodt` — when/switch. */
+/** `vibecheck (x) bet ... periodt` - when/switch. */
 data class VibecheckStmt(
     val subject: Expr,
     val branches: List<VcBranch>,
@@ -151,7 +151,7 @@ data class VibecheckStmt(
     override val col: Int,
 ) : Stmt
 
-/** `mog (item inside things) bet ... periodt` — for-in. */
+/** `mog (item inside things) bet ... periodt` - for-in. */
 data class MogStmt(
     val varName: String,
     val iterable: Expr,
@@ -160,7 +160,7 @@ data class MogStmt(
     override val col: Int,
 ) : Stmt
 
-/** `finna bet ... caught in 4k (oops) bet ... periodt` — try/catch. */
+/** `finna bet ... caught in 4k (oops) bet ... periodt` - try/catch. */
 data class FinnaStmt(
     val tryBlock: Block,
     val catchName: String,
@@ -169,7 +169,7 @@ data class FinnaStmt(
     override val col: Int,
 ) : Stmt
 
-/** `crashout <expr>` — throw a SkillIssue. */
+/** `crashout <expr>` - throw a SkillIssue. */
 data class CrashoutStmt(
     val value: Expr,
     override val line: Int,
@@ -210,7 +210,7 @@ data class SkipStmt(override val line: Int, override val col: Int) : Stmt
 
 data class ExprStmt(val expr: Expr, override val line: Int, override val col: Int) : Stmt
 
-/** `drop site on <port> bet ... periodt` — the one dedicated web statement. */
+/** `drop site on <port> bet ... periodt` - the one dedicated web statement. */
 data class DropSiteStmt(
     val port: Expr,
     val block: Block,
@@ -228,10 +228,10 @@ data class BoolLit(val value: Boolean, override val line: Int, override val col:
 data class GhostedLit(override val line: Int, override val col: Int) : Expr
 data class NameRef(val name: String, override val line: Int, override val col: Int) : Expr
 
-/** `me` — this. */
+/** `me` - this. */
 data class MeRef(override val line: Int, override val col: Int) : Expr
 
-/** `xs[i]` — indexing. */
+/** `xs[i]` - indexing. */
 data class IndexExpr(
     val receiver: Expr,
     val index: Expr,
@@ -290,5 +290,5 @@ data class Unary(
     override val col: Int,
 ) : Expr
 
-/** postfix `deadass` — emitted as a runtime `.deadass()` call so the NPE roast is ours. */
+/** postfix `deadass` - emitted as a runtime `.deadass()` call so the NPE roast is ours. */
 data class DeadassExpr(val operand: Expr, override val line: Int, override val col: Int) : Expr

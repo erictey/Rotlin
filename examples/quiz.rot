@@ -5,23 +5,59 @@ sigma Question(rizz prompt: lore, rizz answer: lore) bet
 periodt
 
 rizz questions = squad(
-    Question("what does rizz declare?", "val"),
-    Question("what closes a bet?", "periodt")
+    Question("What is 2 + 2?", "4"),
+    Question("Capital of France?", "Paris")
 )
 
 gyatt score = 0
 mog (q inside questions) bet
     yap(q.prompt)
-    sus (q.check("periodt")) bet
-        yap("  correct, W")
+    sus (q.check("4")) bet
+        yap("  correct")
         score gains 1
     bruh bet
-        yap("  wrong, L")
+        yap("  wrong")
     periodt
 periodt
 
 vibecheck (score) bet
-    0 -> yap("final verdict: NPC behavior")
-    1 -> yap("final verdict: mid")
-    bruh -> yap("final verdict: certified W")
+    0 -> yap("Final score: 0")
+    1 -> yap("Final score: 1")
+    bruh -> yap("Final score: perfect")
 periodt
+
+/* The same program in Kotlin (what Rotlin compiles this to.
+   `yap`/`squad` are Rotlin runtime helpers - println / listOf):
+
+import rotlin.runtime.*
+
+open class Question(val prompt: String, val answer: String) {
+    open fun check(guess: String): Boolean {
+        return guess == this.answer
+    }
+}
+
+val questions = squad(
+    Question("What is 2 + 2?", "4"),
+    Question("Capital of France?", "Paris")
+)
+
+var score = 0
+fun main() {
+    for (q in questions) {
+        yap(q.prompt)
+        if (q.check("4")) {
+            yap("  correct")
+            score += 1
+        } else {
+            yap("  wrong")
+        }
+    }
+
+    when (score) {
+        0 -> yap("Final score: 0")
+        1 -> yap("Final score: 1")
+        else -> yap("Final score: perfect")
+    }
+}
+*/

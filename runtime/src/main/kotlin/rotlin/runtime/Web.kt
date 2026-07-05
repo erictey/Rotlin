@@ -27,7 +27,7 @@ class PageSpec internal constructor(val path: String, val body: PageContext.() -
 
 /**
  * Receiver for `page("/") bet ... periodt` blocks. Members shadow the console
- * top-levels — inside a page, `yap` writes a paragraph, not stdout.
+ * top-levels - inside a page, `yap` writes a paragraph, not stdout.
  */
 class PageContext internal constructor(private val pagePath: String) {
     internal val html = StringBuilder()

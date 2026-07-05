@@ -1,7 +1,7 @@
 package rotlin.compiler
 
 /**
- * Rotlin's type universe. `display()` speaks Rotlin, not Kotlin — kids see
+ * Rotlin's type universe. `display()` speaks Rotlin, not Kotlin - kids see
  * `maybe lore`, never `String?`. UnknownT is the cascade suppressor: anything
  * unresolvable types as Unknown, errors once, and stays silent downstream
  * (kotlinc remains the backstop).

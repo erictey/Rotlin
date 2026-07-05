@@ -3,7 +3,7 @@ package rotlin.compiler
 /**
  * Terminal rendering for diagnostics: header, source excerpt with caret,
  * fix hint, and a deterministic vibe line. Aura math lives here too.
- * All output is ASCII — Windows conhost mangles anything fancier.
+ * All output is ASCII - Windows conhost mangles anything fancier.
  */
 object RoastRenderer {
 

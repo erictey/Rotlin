@@ -12,7 +12,7 @@ import java.util.concurrent.Executors
 /**
  * Static hook the CLI sets before running user code in drop mode. Shared
  * across classloader generations because the runtime lives in the parent
- * loader — so a re-run of user main lands its SiteSpec in the same host.
+ * loader - so a re-run of user main lands its SiteSpec in the same host.
  */
 object DevHost {
     @Volatile

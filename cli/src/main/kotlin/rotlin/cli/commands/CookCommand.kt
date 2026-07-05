@@ -13,7 +13,7 @@ import java.io.PrintStream
 import java.nio.file.Files
 import java.nio.file.Path
 
-/** `rotlin cook app.rot` — compile and run a console program. */
+/** `rotlin cook app.rot` - compile and run a console program. */
 class CookCommand(private val err: PrintStream = System.err) {
 
     fun run(file: Path): Int {

@@ -1,63 +1,65 @@
 # THE ROTLIN TOUR
 
-so you wanna code. bet. this is Rotlin — a real programming language that
-compiles to the JVM (the thing that runs Minecraft servers, no cap) but
-speaks your language.
+Rotlin is a real programming language that compiles to the JVM, but its
+keywords are written in meme slang. This tour walks through the syntax.
+Only the keywords are slang; your own variables, strings, and values
+should read like normal code.
 
 ## 0. run stuff
 
 ```
 rotlin cook app.rot     compiles + runs your program
-rotlin drop app.rot     puts your WEBSITE on localhost, auto-reloads on save
+rotlin drop app.rot     serves your website on localhost, auto-reloads on save
 rotlin aura app.rot     checks your code and rates it out of 1000 aura
 ```
 
-## 1. yap at the world
+## 1. print output
 
 ```rotlin
-yap("wsg chat")
+yap("Hello, world")
 ```
 
-save as `first.rot`, then `rotlin cook first.rot`. that's a whole program.
-no ceremony, no `public static void` ancient scrolls.
+Save as `first.rot`, then `rotlin cook first.rot`. That is a whole
+program. No `public static void` boilerplate.
 
-## 2. variables — rizz and gyatt
+## 2. variables - rizz and gyatt
 
 ```rotlin
-rizz name = "eric"        // rizz = locked in. can NEVER change. no takebacks.
-gyatt score = 0           // gyatt = can change whenever
+rizz name = "Alice"       // rizz = immutable, can never be reassigned
+gyatt score = 0           // gyatt = mutable, can change
 score gains 100           // score += 100
 score loses 25            // score -= 25
-yap("yo $name, you got $score aura")
+yap("Hi $name, your score is $score")
 ```
 
-rotlin FIGURES OUT the types (that's called type inference and it's free).
-`name` is a `lore` (text), `score` is an `aura` (whole number). the types:
+Rotlin infers the types (type inference) for you. `name` is a `lore`
+(text), `score` is an `aura` (whole number). The types:
 
 | type | what it is | example |
 |---|---|---|
 | `aura` | whole number | `42` |
 | `ratio` | decimal number | `3.14` |
-| `lore` | text | `"skibidi"` |
+| `lore` | text | `"hello"` |
 | `fact` | true/false | `based` / `cringe` |
 | `squad<aura>` | a list | `squad(1, 2, 3)` |
 | `stash<lore, aura>` | key-value pairs | `stash()` |
 
-## 3. vibe checks — sus and bruh
+## 3. conditionals - sus and bruh
 
-blocks open with `bet` and close with `periodt`. end of discussion.
+Blocks open with `bet` and close with `periodt`.
 
 ```rotlin
 sus (score atleast 100) bet
-    yap("W")
+    yap("high")
 bruh sus (score clears 0) bet
-    yap("mid")
+    yap("medium")
 bruh bet
-    yap("L + ratio")
+    yap("low")
 periodt
 ```
 
-comparisons are WORDS here. symbols are banned (try `==`, see what happens):
+Comparisons are words here; symbols are banned (try `==` and see what
+happens):
 
 | rotlin | means | | rotlin | means |
 |---|---|---|---|---|
@@ -65,71 +67,70 @@ comparisons are WORDS here. symbols are banned (try `==`, see what happens):
 | `clears` | greater | | `flops` | less |
 | `atleast` | >= | | `atmost` | <= |
 
-logic is `and`, `or`, `not`. like english. because it is english.
+Logic uses `and`, `or`, `not`.
 
-## 4. loops — grind and mog
+## 4. loops - grind and mog
 
 ```rotlin
 gyatt hp = 3
-grind (hp clears 0) bet          // while loop: stay on the grind
+grind (hp clears 0) bet          // while loop
     yap("hp: $hp")
     hp loses 1
 periodt
 
 mog (i inside 1 through 5) bet   // for loop over a range
-    yap("wave $i")
+    yap("step $i")
 periodt
 
-rizz homies = squad("dre", "jayden", "kai")
-mog (homie inside homies) bet    // for loop over a squad
-    yap("sup $homie")
+rizz names = squad("Alice", "Bob", "Carol")
+mog (name inside names) bet      // for loop over a squad
+    yap("Hi, $name")
 periodt
 ```
 
 `dip` breaks out of a loop. `skip` jumps to the next round.
 
-## 5. functions — let him cook
+## 5. functions - skibidi
 
 ```rotlin
-skibidi roast(name: lore, level: aura) spits lore bet
+skibidi rank(name: lore, level: aura) spits lore bet
     sus (level atleast 9) bet
-        yeet name + " is down catastrophic"
+        yeet name + " is an expert"
     periodt
-    yeet name + " is kinda mid"
+    yeet name + " is a beginner"
 periodt
 
-yap(roast("caseoh", 10))
+yap(rank("Alice", 10))
 ```
 
-`skibidi` defines it, `spits` says what comes back, `yeet` sends it back.
-parameters need types — that's the deal, no cap.
+`skibidi` defines a function, `spits` declares the return type, `yeet`
+returns a value. Parameters need explicit types.
 
-## 6. null safety — ghosted
+## 6. null safety - ghosted
 
-some values might not exist. rotlin makes you HANDLE it, that's the
-"null safety" thing grown devs cry about.
+Some values might not exist. Rotlin makes you handle that (null safety).
 
 ```rotlin
-rizz answer: maybe lore = listen()      // user input... might be ghosted
+rizz answer: maybe lore = listen()      // user input, might be missing
 
-// answer.length            <- rotlin STOPS you. it might be a ghost.
+// answer.length            <- Rotlin stops you: it might be null
 
 sus (answer aint ghosted) bet
-    yap(answer.length)                  // safe in here - rotlin KNOWS
+    yap(answer.length)                  // safe here: Rotlin knows it exists
 periodt
 
-rizz backup = answer otherwise "nothing"   // fallback if ghosted
-yap(answer?.length)                        // safe peek (gives maybe)
-yap(answer deadass)                        // "TRUST me it's real" - crashes if you lied
+rizz backup = answer otherwise "nothing"   // fallback if null
+yap(answer?.length)                        // safe access (returns maybe)
+yap(answer deadass)                        // assert non-null; crashes if it was null
 ```
 
-if `deadass` was cap, you get: *"you said deadass but it was ghosted.
-caught in 4k."* — that's on you.
+If `deadass` was wrong, you get: *"you said deadass but it was ghosted.
+caught in 4k."*
 
-## 7. classes — sigma grindset
+## 7. classes - sigma
 
 ```rotlin
-vibe Fetchable bet                       // an interface: a vibe to match
+vibe Fetchable bet                       // an interface
     skibidi fetch() spits lore
 periodt
 
@@ -140,11 +141,11 @@ sigma Animal(rizz name: lore) bet
 periodt
 
 sigma Dog(rizz dogName: lore) is a Animal(dogName) vibes with Fetchable bet
-    gatekeep gyatt barks = 0             // gatekeep = private, nobody touches it
+    gatekeep gyatt barks = 0             // gatekeep = private
 
     remix skibidi speak() spits lore bet // remix = override the parent's version
         barks gains 1
-        yeet me.dogName + " says WOOF"
+        yeet me.dogName + " says woof"
     periodt
 
     remix skibidi fetch() spits lore bet
@@ -152,60 +153,60 @@ sigma Dog(rizz dogName: lore) is a Animal(dogName) vibes with Fetchable bet
     periodt
 periodt
 
-rizz rex = Dog("rex")
-yap(rex.speak())
+rizz dog = Dog("Rex")
+yap(dog.speak())
 ```
 
 `me` is this object. `npc Config bet ... periodt` makes a singleton
-(exactly one of it in the whole program — an npc).
+(exactly one instance in the whole program).
 
-## 8. vibecheck — the switch-up
+## 8. vibecheck - the switch
 
 ```rotlin
 vibecheck (score) bet
-    0 -> yap("NPC behavior")
-    1, 2 -> yap("lowkey mid")
-    bruh -> yap("certified W")
+    0 -> yap("zero")
+    1, 2 -> yap("one or two")
+    bruh -> yap("anything else")
 periodt
 ```
 
-## 9. when it crashes out — finna / caught in 4k
+## 9. error handling - finna / caught in 4k
 
 ```rotlin
 finna bet
-    crashout "lil bro tried something illegal"
-caught in 4k (oops) bet
-    yap("handled it: $oops")
+    crashout "invalid operation"
+caught in 4k (error) bet
+    yap("handled it: $error")
 periodt
 ```
 
 `crashout` throws a SkillIssue. `finna ... caught in 4k` handles it.
 
-## 10. THE WEB PART (the reason you're here)
+## 10. the web part
 
 ```rotlin
-gyatt score = 0
+gyatt count = 0
 
 drop site on 3000 bet
     page("/") bet
-        bigyap("AURA CLICKER")           // <- big heading
-        yap("your aura: $score")         // <- paragraph (yes, same yap. context matters.)
-        pic("https://cataas.com/cat")    // <- image
-        smash("+1 aura") does bet        // <- a BUTTON. smash it.
-            score gains 1
+        bigyap("Counter")                // a big heading
+        yap("Count: $count")             // a paragraph (same yap; context decides)
+        pic("https://cataas.com/cat")    // an image
+        smash("Increment") does bet      // a button
+            count gains 1
         periodt
     periodt
 periodt
 ```
 
-run `rotlin drop clicker.rot`, open the link, click the button, feel the
-dopamine. now change the text and SAVE — the browser updates itself.
-break the code and save — the roast shows up IN the page. fix it. repeat.
+Run `rotlin drop clicker.rot`, open the link, and click the button. Now
+change the text and save; the browser updates itself. Break the code and
+save; the roast shows up in the page. Fix it and repeat.
 
-## 11. use the whole JVM — summon
+## 11. use the whole JVM - summon
 
-rotlin programs are real JVM programs. every Java/Kotlin library ever
-written is yours:
+Rotlin programs are real JVM programs, so every Java/Kotlin library is
+available:
 
 ```rotlin
 summon kotlin.math.PI
@@ -218,7 +219,7 @@ yap("dice: " + (rng.nextInt(6) + 1))
 
 ## cheat sheet
 
-| rotlin | normal-people language |
+| rotlin | Kotlin equivalent |
 |---|---|
 | `rizz` / `gyatt` | val / var |
 | `skibidi` / `yeet` / `spits` | fun / return / return type |
@@ -233,5 +234,3 @@ yap("dice: " + (rng.nextInt(6) + 1))
 | `summon` / `hood` | import / package |
 | `finna` / `caught in 4k` / `crashout` | try / catch / throw |
 | `dip` / `skip` | break / continue |
-
-now go cook.

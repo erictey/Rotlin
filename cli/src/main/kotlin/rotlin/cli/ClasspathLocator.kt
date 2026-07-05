@@ -19,7 +19,7 @@ object ClasspathLocator {
 
         val stdlib = entries.filter { it.fileName.toString().startsWith("kotlin-stdlib") }
         check(stdlib.isNotEmpty()) {
-            "could not locate kotlin-stdlib on the CLI classpath — broken installation?"
+            "could not locate kotlin-stdlib on the CLI classpath - broken installation?"
         }
 
         val runtime = entries.filter { p ->

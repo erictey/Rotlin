@@ -6,7 +6,7 @@ import java.nio.file.Path
 
 /**
  * Runs a compiled Rotlin program in-process via a fresh URLClassLoader whose
- * parent is the CLI's own loader (so rotlin.runtime classes are shared —
+ * parent is the CLI's own loader (so rotlin.runtime classes are shared -
  * required for DevHost statics to be visible to both sides).
  */
 class Runner(private val classpath: List<Path>) {

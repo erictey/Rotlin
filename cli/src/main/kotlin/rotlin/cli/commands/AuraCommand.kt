@@ -9,7 +9,7 @@ import java.io.PrintStream
 import java.nio.file.Files
 import java.nio.file.Path
 
-/** `rotlin aura app.rot` — type-check only, roast the code, report the aura score. */
+/** `rotlin aura app.rot` - type-check only, roast the code, report the aura score. */
 class AuraCommand(private val out: PrintStream = System.out) {
 
     fun run(file: Path): Int {

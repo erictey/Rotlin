@@ -15,7 +15,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 /**
- * `rotlin drop app.rot` — serve the site, watch the file, hot reload on save.
+ * `rotlin drop app.rot` - serve the site, watch the file, hot reload on save.
  *
  * The DevHost owns the socket for the whole session; each successful rebuild
  * compiles into a fresh generation dir (Windows file locks), runs user main

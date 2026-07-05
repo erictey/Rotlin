@@ -19,7 +19,7 @@ import rotlin.compiler.RType.UnknownT
  * errors; kotlinc is ground truth for anything it can't see (interop members
  * type as Unknown and stay silent).
  *
- * Smart casts narrow only *stable* names (rizz locals and params) — the same
+ * Smart casts narrow only *stable* names (rizz locals and params) - the same
  * rule as Kotlin, which matters because the emitted Kotlin must smart-cast
  * too, or kotlinc would reject code we approved.
  */
@@ -93,7 +93,7 @@ class TypeChecker(private val diags: DiagnosticBag) {
     /** Overlay frames of narrowed types (smart casts). */
     private val facts = ArrayDeque<MutableMap<String, RType>>()
 
-    /** Names whose narrowing was denied because they're gyatt — for the teaching roast. */
+    /** Names whose narrowing was denied because they're gyatt - for the teaching roast. */
     private val deniedFacts = ArrayDeque<MutableSet<String>>()
 
     fun check(program: Program) {
