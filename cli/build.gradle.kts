@@ -23,3 +23,8 @@ application {
 tasks.test {
     useJUnitPlatform()
 }
+
+tasks.named<JavaExec>("run") {
+    workingDir = rootDir // so `gradlew :cli:run --args="cook examples/hello.rot"` resolves from the repo root
+    standardInput = System.`in`
+}

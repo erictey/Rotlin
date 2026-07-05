@@ -1,0 +1,231 @@
+package rotlin.compiler
+
+data class EmitOutput(val ktText: String, val lineMap: LineMap, val mainClassFqn: String)
+
+/**
+ * Line-anchored printer: every construct emits Kotlin on the same line as its
+ * Rotlin source (plus a constant 2-line prelude), so kotlinc diagnostics AND
+ * runtime stack traces map back to `.rot` lines by plain subtraction.
+ *
+ * Script-style top level: declarations before the first statement stay
+ * top-level; from the first statement onward everything is wrapped into a
+ * synthesized `fun main() {` opened inline on that statement's line and closed
+ * on the line after the last one.
+ */
+class KotlinEmitter {
+
+    private companion object {
+        const val PRELUDE_LINES = 2
+
+        val TYPE_MAP = mapOf(
+            "aura" to "Int",
+            "ratio" to "Double",
+            "lore" to "String",
+            "fact" to "Boolean",
+            "squad" to "MutableList",
+            "stash" to "MutableMap",
+        )
+
+        val KOTLIN_KEYWORDS = setOf(
+            "as", "break", "class", "continue", "do", "else", "false", "for", "fun", "if",
+            "in", "interface", "is", "null", "object", "package", "return", "super", "this",
+            "throw", "true", "try", "typealias", "typeof", "val", "var", "when", "while",
+        )
+    }
+
+    private val sb = StringBuilder()
+    private var currentLine = 1
+
+    fun emit(program: Program): EmitOutput {
+        sb.append("@file:JvmName(\"RotMain\")\n")
+        currentLine = 2
+
+        if (program.hood != null) {
+            // package must precede imports, so the runtime import rides the hood line
+            padTo(program.hood.line + PRELUDE_LINES)
+            write("package ${program.hood.path}; import rotlin.runtime.*")
+        } else {
+            write("import rotlin.runtime.*")
+        }
+
+        for (summon in program.summons) {
+            padTo(summon.line + PRELUDE_LINES)
+            write("import ${summon.path}${if (summon.wildcard) ".*" else ""}")
+        }
+
+        // split: leading declarations stay top-level, rest wraps into main()
+        val firstStmtIdx = program.items.indexOfFirst { it !is FunDecl && it !is VarDecl }
+        val topLevel = if (firstStmtIdx == -1) program.items else program.items.take(firstStmtIdx)
+        val mainBody = if (firstStmtIdx == -1) emptyList() else program.items.drop(firstStmtIdx)
+
+        for (item in topLevel) emitStmt(item)
+
+        if (mainBody.isNotEmpty()) {
+            padTo(mainBody.first().line + PRELUDE_LINES)
+            write("fun main() { ")
+            for (item in mainBody) emitStmt(item)
+            padTo(currentLine + 1)
+            write("}")
+        }
+
+        sb.append('\n')
+        val fqn = if (program.hood != null) "${program.hood.path}.RotMain" else "RotMain"
+        return EmitOutput(sb.toString(), LineMap.offset(PRELUDE_LINES), fqn)
+    }
+
+    // ---- printer ----------------------------------------------------------
+
+    private fun padTo(line: Int) {
+        while (currentLine < line) {
+            sb.append('\n')
+            currentLine++
+        }
+    }
+
+    private fun write(text: String) {
+        sb.append(text)
+    }
+
+    /** Pads to [line]; if content already sits on it, separates with a space. */
+    private fun anchor(line: Int) {
+        if (line > currentLine) padTo(line)
+        else if (sb.isNotEmpty() && sb.last() != '\n' && sb.last() != ' ') write(" ")
+    }
+
+    private fun escapeName(name: String): String =
+        if (name in KOTLIN_KEYWORDS) "`$name`" else name
+
+    // ---- statements --------------------------------------------------------
+
+    private fun emitStmt(stmt: Stmt) {
+        when (stmt) {
+            is FunDecl -> {
+                anchor(stmt.line + PRELUDE_LINES)
+                val params = stmt.params.joinToString(", ") { "${escapeName(it.name)}: ${typeText(it.type)}" }
+                val ret = stmt.returnType?.let { ": ${typeText(it)}" } ?: ""
+                write("fun ${escapeName(stmt.name)}($params)$ret {")
+                emitBlockBody(stmt.body)
+            }
+            is VarDecl -> {
+                anchor(stmt.line + PRELUDE_LINES)
+                val kw = if (stmt.mutable) "var" else "val"
+                val typed = stmt.declaredType?.let { ": ${typeText(it)}" } ?: ""
+                write("$kw ${escapeName(stmt.name)}$typed = ${exprText(stmt.init)}")
+            }
+            is Assign -> {
+                anchor(stmt.line + PRELUDE_LINES)
+                write("${exprText(stmt.target)} ${stmt.op.kotlin} ${exprText(stmt.value)}")
+            }
+            is SusStmt -> emitSus(stmt)
+            is GrindStmt -> {
+                anchor(stmt.line + PRELUDE_LINES)
+                write("while (${exprText(stmt.cond)}) {")
+                emitBlockBody(stmt.body)
+            }
+            is YeetStmt -> {
+                anchor(stmt.line + PRELUDE_LINES)
+                write(if (stmt.value == null) "return" else "return ${exprText(stmt.value)}")
+            }
+            is DipStmt -> { anchor(stmt.line + PRELUDE_LINES); write("break") }
+            is SkipStmt -> { anchor(stmt.line + PRELUDE_LINES); write("continue") }
+            is ExprStmt -> {
+                anchor(stmt.line + PRELUDE_LINES)
+                write(exprText(stmt.expr))
+            }
+        }
+    }
+
+    private fun emitSus(stmt: SusStmt) {
+        anchor(stmt.line + PRELUDE_LINES)
+        write("if (${exprText(stmt.cond)}) {")
+        emitBlockBody(stmt.thenBlock)
+        when (val e = stmt.elseBranch) {
+            null -> {}
+            is Block -> {
+                anchor(e.line + PRELUDE_LINES)
+                write("else {")
+                emitBlockBody(e)
+            }
+            is SusStmt -> {
+                anchor(e.line + PRELUDE_LINES)
+                write("else ")
+                // inline: emit the nested if on this same line
+                write("if (${exprText(e.cond)}) {")
+                emitBlockBody(e.thenBlock)
+                when (val e2 = e.elseBranch) {
+                    null -> {}
+                    is Block -> { anchor(e2.line + PRELUDE_LINES); write("else {"); emitBlockBody(e2) }
+                    is SusStmt -> { anchor(e2.line + PRELUDE_LINES); write("else "); emitSusInline(e2) }
+                    else -> {}
+                }
+            }
+            else -> {}
+        }
+    }
+
+    private fun emitSusInline(stmt: SusStmt) {
+        write("if (${exprText(stmt.cond)}) {")
+        emitBlockBody(stmt.thenBlock)
+        when (val e = stmt.elseBranch) {
+            null -> {}
+            is Block -> { anchor(e.line + PRELUDE_LINES); write("else {"); emitBlockBody(e) }
+            is SusStmt -> { anchor(e.line + PRELUDE_LINES); write("else "); emitSusInline(e) }
+            else -> {}
+        }
+    }
+
+    /** Emits the statements of a block and its closing `}` on the periodt line. */
+    private fun emitBlockBody(block: Block) {
+        for (s in block.stmts) emitStmt(s)
+        anchor(block.endLine + PRELUDE_LINES)
+        write("}")
+    }
+
+    // ---- types ---------------------------------------------------------------
+
+    private fun typeText(type: TypeRef): String = when (type) {
+        is TypeRef.Named -> {
+            val base = TYPE_MAP[type.name] ?: type.name
+            if (type.args.isEmpty()) base
+            else "$base<${type.args.joinToString(", ") { typeText(it) }}>"
+        }
+        is TypeRef.Maybe -> "${typeText(type.inner)}?"
+    }
+
+    // ---- expressions ------------------------------------------------------------
+
+    private fun exprText(expr: Expr): String = render(expr, parenthesize = false)
+
+    /** Operands wrap binaries/unaries in parens — cheap, same-line, semantics-proof. */
+    private fun operand(expr: Expr): String = render(expr, parenthesize = true)
+
+    private fun render(expr: Expr, parenthesize: Boolean): String = when (expr) {
+        is IntLit -> expr.text
+        is DoubleLit -> expr.text
+        is BoolLit -> expr.value.toString()
+        is GhostedLit -> "null"
+        is NameRef -> escapeName(expr.name)
+        is StringTmpl -> buildString {
+            append('"')
+            for (part in expr.parts) {
+                when (part) {
+                    is TmplNode.Text -> append(part.raw)
+                    is TmplNode.Interp -> append("\${").append(exprText(part.expr)).append("}")
+                }
+            }
+            append('"')
+        }
+        is Call -> "${render(expr.callee, parenthesize = true)}(${expr.args.joinToString(", ") { exprText(it) }})"
+        is MemberAccess -> "${render(expr.receiver, parenthesize = true)}${if (expr.safe) "?." else "."}${escapeName(expr.name)}"
+        is DeadassExpr -> "${render(expr.operand, parenthesize = true)}.deadass()"
+        is Unary -> {
+            val text = "${expr.op.kotlin}${render(expr.operand, parenthesize = true)}"
+            if (parenthesize) "($text)" else text
+        }
+        is Binary -> {
+            val sep = if (expr.op == BinOp.THROUGH) "" else " "
+            val text = "${operand(expr.left)}$sep${expr.op.kotlin}$sep${operand(expr.right)}"
+            if (parenthesize) "($text)" else text
+        }
+    }
+}

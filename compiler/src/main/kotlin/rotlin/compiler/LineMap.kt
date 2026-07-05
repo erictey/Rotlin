@@ -14,5 +14,10 @@ interface LineMap {
         fun identity(): LineMap = object : LineMap {
             override fun toRotLine(ktLine: Int): Int? = ktLine
         }
+
+        /** rotLine = ktLine - [prelude]; null for lines inside the generated prelude. */
+        fun offset(prelude: Int): LineMap = object : LineMap {
+            override fun toRotLine(ktLine: Int): Int? = (ktLine - prelude).takeIf { it >= 1 }
+        }
     }
 }
