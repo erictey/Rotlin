@@ -1,0 +1,48 @@
+summon kotlin.math.PI
+
+tung greet(name: lore) spits lore {
+    yeet "Hello, " + name
+}
+
+beta count = 0
+grind (count < 3) {
+    yap("Number $count")
+    count gains 1
+}
+
+if (count is 3) {
+    yap("Loop finished")
+} else {
+    yap("Still looping")
+}
+
+yap(greet("World"))
+yap("PI is $PI")
+
+/* The same program in Kotlin (what Rotlin compiles this to.
+   `yap` is a Rotlin runtime helper - think println):
+
+import rotlin.runtime.*
+import kotlin.math.PI
+
+fun greet(name: String): String {
+    return "Hello, " + name
+}
+
+var count = 0
+fun main() {
+    while (count < 3) {
+        yap("Number ${count}")
+        count += 1
+    }
+
+    if (count == 3) {
+        yap("Loop finished")
+    } else {
+        yap("Still looping")
+    }
+
+    yap(greet("World"))
+    yap("PI is ${PI}")
+}
+*/

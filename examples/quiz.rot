@@ -1,0 +1,63 @@
+class Question(alpha prompt: lore, alpha answer: lore) {
+    tung check(guess: lore) spits fact {
+        yeet guess is this.answer
+    }
+}
+
+alpha questions = squad(
+    Question("What is 2 + 2?", "4"),
+    Question("Capital of France?", "Paris")
+)
+
+beta score = 0
+mog (q inside questions) {
+    yap(q.prompt)
+    if (q.check("4")) {
+        yap("  correct")
+        score gains 1
+    } else {
+        yap("  wrong")
+    }
+}
+
+when (score) {
+    0 -> yap("Final score: 0")
+    1 -> yap("Final score: 1")
+    else -> yap("Final score: perfect")
+}
+
+/* The same program in Kotlin (what Rotlin compiles this to.
+   `yap`/`squad` are Rotlin runtime helpers - println / listOf):
+
+import rotlin.runtime.*
+
+open class Question(val prompt: String, val answer: String) {
+    open fun check(guess: String): Boolean {
+        return guess == this.answer
+    }
+}
+
+val questions = squad(
+    Question("What is 2 + 2?", "4"),
+    Question("Capital of France?", "Paris")
+)
+
+var score = 0
+fun main() {
+    for (q in questions) {
+        yap(q.prompt)
+        if (q.check("4")) {
+            yap("  correct")
+            score += 1
+        } else {
+            yap("  wrong")
+        }
+    }
+
+    when (score) {
+        0 -> yap("Final score: 0")
+        1 -> yap("Final score: 1")
+        else -> yap("Final score: perfect")
+    }
+}
+*/

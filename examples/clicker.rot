@@ -1,0 +1,36 @@
+beta count = 0
+
+drop site on 3000 {
+    page("/") {
+        bigyap("Counter")
+        yap("Count: $count")
+        smash("Increment") does {
+            count gains 1
+        }
+        smash("Reset") does {
+            count = 0
+        }
+    }
+}
+
+/* The same program in Kotlin (what Rotlin compiles this to):
+
+import rotlin.runtime.*
+
+var count = 0
+
+fun main() {
+    site(3000) {
+        page("/") {
+            bigyap("Counter")
+            yap("Count: ${count}")
+            smash("Increment") {
+                count += 1
+            }
+            smash("Reset") {
+                count = 0
+            }
+        }
+    }
+}
+*/
