@@ -112,6 +112,14 @@ data class SkipStmt(override val line: Int, override val col: Int) : Stmt
 
 data class ExprStmt(val expr: Expr, override val line: Int, override val col: Int) : Stmt
 
+/** `drop site on <port> bet ... periodt` — the one dedicated web statement. */
+data class DropSiteStmt(
+    val port: Expr,
+    val block: Block,
+    override val line: Int,
+    override val col: Int,
+) : Stmt
+
 // ---- expressions -------------------------------------------------------------
 
 sealed interface Expr : Node
@@ -133,11 +141,13 @@ data class StringTmpl(
     override val col: Int,
 ) : Expr
 
+/** [lambda] is the trailing block: `page("/") bet ... periodt` → `page("/") { ... }`. */
 data class Call(
     val callee: Expr,
     val args: List<Expr>,
     override val line: Int,
     override val col: Int,
+    val lambda: Block? = null,
 ) : Expr
 
 data class MemberAccess(

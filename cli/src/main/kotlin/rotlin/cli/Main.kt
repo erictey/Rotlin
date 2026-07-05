@@ -1,6 +1,7 @@
 package rotlin.cli
 
 import rotlin.cli.commands.CookCommand
+import rotlin.cli.commands.DropCommand
 import java.nio.file.Paths
 import kotlin.system.exitProcess
 
@@ -20,6 +21,7 @@ fun main(args: Array<String>) {
     val file = Paths.get(args[1])
     val exit = when (args[0]) {
         "cook" -> CookCommand().run(file)
+        "drop" -> DropCommand().run(file)
         else -> {
             println("unknown command `${args[0]}` - that's not a thing yet")
             println(USAGE.trim())

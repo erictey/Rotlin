@@ -119,6 +119,36 @@ class EmitterTest {
     }
 
     @Test
+    fun `web dsl emits trailing lambdas and site call`() {
+        val src = """
+            gyatt score = 0
+
+            drop site on 3000 bet
+            page("/") bet
+            bigyap("AURA CLICKER")
+            yap("aura: ${'$'}score")
+            smash("+1") does bet
+            score gains 1
+            periodt
+            periodt
+            periodt
+        """.trimIndent()
+        val out = emit(src)
+        val lines = out.ktText.lines()
+        assertEquals("var score = 0", lines[2])
+        assertEquals("fun main() { site(3000) {", lines[4])
+        assertEquals("page(\"/\") {", lines[5])
+        assertEquals("bigyap(\"AURA CLICKER\")", lines[6])
+        assertEquals("yap(\"aura: \${score}\")", lines[7])
+        assertEquals("smash(\"+1\") {", lines[8])
+        assertEquals("score += 1", lines[9])
+        assertEquals("}", lines[10])
+        assertEquals("}", lines[11])
+        assertEquals("}", lines[12])
+        assertEquals("}", lines[13])
+    }
+
+    @Test
     fun `ghosted emits null and based cringe emit booleans`() {
         val out = emit("rizz g = ghosted\nrizz t = based\nrizz f = cringe\n")
         val lines = out.ktText.lines()

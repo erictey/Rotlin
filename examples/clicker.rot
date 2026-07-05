@@ -1,0 +1,14 @@
+gyatt score = 0
+
+drop site on 3000 bet
+    page("/") bet
+        bigyap("AURA CLICKER")
+        yap("your aura: $score")
+        smash("+1 aura") does bet
+            score gains 1
+        periodt
+        smash("lose it all") does bet
+            score = 0
+        periodt
+    periodt
+periodt

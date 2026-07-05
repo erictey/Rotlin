@@ -167,7 +167,8 @@ class Parser(rawTokens: List<Token>, private val diags: DiagnosticBag) {
             YEET -> parseYeet()
             DIP -> advance().let { val s = DipStmt(it.line, it.col); expectStmtEnd(); s }
             SKIP -> advance().let { val s = SkipStmt(it.line, it.col); expectStmtEnd(); s }
-            SIGMA, NPC, VIBE, MOG, VIBECHECK, FINNA, CRASHOUT, DROP -> {
+            DROP -> parseDropSite()
+            SIGMA, NPC, VIBE, MOG, VIBECHECK, FINNA, CRASHOUT -> {
                 error("E_NOT_YET", "`${peek().text}` isn't in this build yet - coming soon fr",
                     peek())
                 synchronize(); null
@@ -231,6 +232,25 @@ class Parser(rawTokens: List<Token>, private val diags: DiagnosticBag) {
             idx = save
         }
         return SusStmt(cond, thenBlock, elseBranch, kw.line, kw.col)
+    }
+
+    private fun parseDropSite(): Stmt? {
+        val kw = advance()
+        if (!(at(IDENT) && peek().text == "site")) {
+            error("E_DROP_WHAT", "drop what?", peek(),
+                hint = "it goes `drop site on 3000 bet ... periodt`")
+            synchronize(); return null
+        }
+        advance() // site
+        if (!(at(IDENT) && peek().text == "on")) {
+            error("E_DROP_WHAT", "where does the site go?", peek(),
+                hint = "it goes `drop site on 3000 bet ... periodt`")
+            synchronize(); return null
+        }
+        advance() // on
+        val port = parseExpression() ?: run { synchronize(); return null }
+        val block = parseBlock() ?: return null
+        return DropSiteStmt(port, block, kw.line, kw.col)
     }
 
     private fun parseGrind(): Stmt? {
@@ -463,7 +483,11 @@ class Parser(rawTokens: List<Token>, private val diags: DiagnosticBag) {
                         if (at(COMMA)) { advance(); skipNewlines() } else break
                     }
                     expect(RPAREN, "`)` to close the call")
-                    Call(expr, args, t.line, t.col)
+                    // trailing lambda: `page("/") bet ... periodt`, `smash("x") does bet ... periodt`
+                    var lambda: Block? = null
+                    if (at(DOES)) { advance(); lambda = parseBlock() }
+                    else if (at(BET)) lambda = parseBlock()
+                    Call(expr, args, t.line, t.col, lambda)
                 }
                 DOT -> {
                     val t = advance()

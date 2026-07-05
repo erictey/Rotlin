@@ -30,6 +30,7 @@ fun Node.sexp(): String = when (this) {
     is DipStmt -> "(break)"
     is SkipStmt -> "(continue)"
     is ExprStmt -> expr.sexp()
+    is DropSiteStmt -> "(drop-site ${port.sexp()} ${block.sexp()})"
     is IntLit -> text
     is DoubleLit -> text
     is BoolLit -> value.toString()
@@ -41,7 +42,7 @@ fun Node.sexp(): String = when (this) {
             is TmplNode.Interp -> "(interp ${it.expr.sexp()})"
         }
     }})"
-    is Call -> "(call ${callee.sexp()}${args.joinToString("") { " ${it.sexp()}" }})"
+    is Call -> "(call ${callee.sexp()}${args.joinToString("") { " ${it.sexp()}" }}${lambda?.let { " ${it.sexp()}" } ?: ""})"
     is MemberAccess -> "(${if (safe) "?." else "."} ${receiver.sexp()} $name)"
     is Binary -> "(${op.kotlin} ${left.sexp()} ${right.sexp()})"
     is Unary -> "(${if (op == UnaryOp.NOT) "!" else "neg"} ${operand.sexp()})"

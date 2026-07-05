@@ -148,6 +148,39 @@ class ParserTest {
             program.summons.map { it.path to it.wildcard })
     }
 
+    // ---- web DSL forms ----
+
+    @Test
+    fun `trailing bet block becomes call lambda`() {
+        assertEquals(
+            "(call page (str \"/\") {(call bigyap (str \"YO\"))})",
+            sexp("page(\"/\") bet\n    bigyap(\"YO\")\nperiodt"),
+        )
+    }
+
+    @Test
+    fun `does before bet is optional sugar`() {
+        assertEquals(
+            "(call smash (str \"+1\") {(+= score 1)})",
+            sexp("smash(\"+1\") does bet\n    score gains 1\nperiodt"),
+        )
+    }
+
+    @Test
+    fun `drop site on parses port and block`() {
+        assertEquals(
+            "(drop-site 3000 {(call page (str \"/\") {(call yap (str \"hi\"))})})",
+            sexp("drop site on 3000 bet\n    page(\"/\") bet\n        yap(\"hi\")\n    periodt\nperiodt"),
+        )
+    }
+
+    @Test
+    fun `drop without site gives a helpful roast`() {
+        val (_, diags) = parse("drop 3000 bet\nperiodt")
+        assertTrue(diags.hasErrors)
+        assertTrue(diags.all.any { it.hint!!.contains("drop site on") })
+    }
+
     // ---- banned symbols recover with diagnostics ----
 
     @Test

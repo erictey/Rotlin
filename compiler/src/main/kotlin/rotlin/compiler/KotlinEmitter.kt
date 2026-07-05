@@ -129,8 +129,20 @@ class KotlinEmitter {
             is DipStmt -> { anchor(stmt.line + PRELUDE_LINES); write("break") }
             is SkipStmt -> { anchor(stmt.line + PRELUDE_LINES); write("continue") }
             is ExprStmt -> {
+                val e = stmt.expr
+                if (e is Call && e.lambda != null) {
+                    anchor(stmt.line + PRELUDE_LINES)
+                    write("${render(e.callee, parenthesize = true)}(${e.args.joinToString(", ") { exprText(it) }}) {")
+                    emitBlockBody(e.lambda)
+                } else {
+                    anchor(stmt.line + PRELUDE_LINES)
+                    write(exprText(e))
+                }
+            }
+            is DropSiteStmt -> {
                 anchor(stmt.line + PRELUDE_LINES)
-                write(exprText(stmt.expr))
+                write("site(${exprText(stmt.port)}) {")
+                emitBlockBody(stmt.block)
             }
         }
     }
@@ -181,6 +193,15 @@ class KotlinEmitter {
         write("}")
     }
 
+    /** Best-effort single-line statement text, for lambdas nested inside expressions. */
+    private fun flatStmt(stmt: Stmt): String = when (stmt) {
+        is ExprStmt -> exprText(stmt.expr)
+        is Assign -> "${exprText(stmt.target)} ${stmt.op.kotlin} ${exprText(stmt.value)}"
+        is VarDecl -> "${if (stmt.mutable) "var" else "val"} ${escapeName(stmt.name)} = ${exprText(stmt.init)}"
+        is YeetStmt -> if (stmt.value == null) "return" else "return ${exprText(stmt.value)}"
+        else -> "Unit"
+    }
+
     // ---- types ---------------------------------------------------------------
 
     private fun typeText(type: TypeRef): String = when (type) {
@@ -215,7 +236,12 @@ class KotlinEmitter {
             }
             append('"')
         }
-        is Call -> "${render(expr.callee, parenthesize = true)}(${expr.args.joinToString(", ") { exprText(it) }})"
+        is Call -> {
+            val base = "${render(expr.callee, parenthesize = true)}(${expr.args.joinToString(", ") { exprText(it) }})"
+            // a lambda-call nested inside an expression flattens to one line
+            if (expr.lambda == null) base
+            else "$base { ${expr.lambda.stmts.joinToString("; ") { flatStmt(it) }} }"
+        }
         is MemberAccess -> "${render(expr.receiver, parenthesize = true)}${if (expr.safe) "?." else "."}${escapeName(expr.name)}"
         is DeadassExpr -> "${render(expr.operand, parenthesize = true)}.deadass()"
         is Unary -> {
