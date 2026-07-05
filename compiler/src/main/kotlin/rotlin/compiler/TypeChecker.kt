@@ -237,6 +237,13 @@ class TypeChecker(private val diags: DiagnosticBag) {
                 for (s in stmt.body.stmts) checkStmt(s, bodyScope)
                 loopDepth--
             }
+            is FinnaStmt -> {
+                checkBlock(stmt.tryBlock, scope)
+                val catchScope = Scope(scope)
+                catchScope.declare(VarSymbol(stmt.catchName, UnknownT, mutable = false))
+                for (s in stmt.catchBlock.stmts) checkStmt(s, catchScope)
+            }
+            is CrashoutStmt -> checkExpr(stmt.value, scope)
             is DropSiteStmt -> {
                 val portT = checkExpr(stmt.port, scope)
                 if (!assignable(portT, AuraT)) {
@@ -320,6 +327,8 @@ class TypeChecker(private val diags: DiagnosticBag) {
 
     private fun stmtReturns(stmt: Stmt): Boolean = when (stmt) {
         is YeetStmt -> true
+        is CrashoutStmt -> true // throwing exits the function too
+        is FinnaStmt -> blockReturns(stmt.tryBlock) && blockReturns(stmt.catchBlock)
         is SusStmt -> {
             val e = stmt.elseBranch
             when (e) {

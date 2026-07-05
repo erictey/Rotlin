@@ -11,7 +11,10 @@ import java.util.concurrent.Executors
  * Routes GET renders and smash-button clicks for a swappable SiteSpec.
  * Handlers run under one lock — kids never meet a race condition.
  */
-internal class SiteRouter(private val devMode: Boolean) {
+internal class SiteRouter(
+    private val devMode: Boolean,
+    private val handlerTimeoutMs: Long = 5_000,
+) {
 
     @Volatile
     var spec: SiteSpec? = null
@@ -66,7 +69,24 @@ internal class SiteRouter(private val devMode: Boolean) {
         val id = q["id"]
         var back = q["back"] ?: "/"
         if (!back.startsWith("/")) back = "/"
-        if (id != null) synchronized(lock) { liveHandlers[id]?.invoke() } // stale id: no-op, self-heals on render
+        val handler = id?.let { liveHandlers[it] } // stale id: no-op, self-heals on render
+
+        if (handler != null) {
+            // watchdog: a kid's infinite loop must not freeze the whole server
+            val worker = Thread(handler).apply { isDaemon = true; start() }
+            worker.join(handlerTimeoutMs)
+            if (worker.isAlive) {
+                respond(
+                    exchange, 500, "text/html; charset=utf-8",
+                    Html.shell(
+                        "<h1>500</h1><p>your smash handler is grinding forever - " +
+                            "there's a loop in there that never dips. fix it and run it back.</p>",
+                        devMode,
+                    ),
+                )
+                return
+            }
+        }
         exchange.responseHeaders.add("Location", back)
         exchange.sendResponseHeaders(303, -1)
     }

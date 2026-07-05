@@ -209,6 +209,18 @@ class EmitterTest {
     }
 
     @Test
+    fun `finna emits try catch and crashout wraps in skill issue`() {
+        val src = "finna bet\ncrashout \"nope\"\ncaught in 4k (oops) bet\nyap(\"got: \" + oops)\nperiodt\n"
+        val lines = emit(src).ktText.lines()
+        assertEquals("fun main() { try {", lines[2])
+        assertEquals("throw SkillIssue(lore(\"nope\"))", lines[3])
+        assertEquals("} catch (oops: Exception) {", lines[4])
+        assertEquals("yap(\"got: \" + oops)", lines[5])
+        assertEquals("}", lines[6])
+        assertEquals("}", lines[7])
+    }
+
+    @Test
     fun `ghosted emits null and based cringe emit booleans`() {
         val out = emit("rizz g = ghosted\nrizz t = based\nrizz f = cringe\n")
         val lines = out.ktText.lines()

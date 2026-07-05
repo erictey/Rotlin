@@ -42,8 +42,23 @@ class DevHostImpl {
         }
     }
 
-    private fun start(port: Int) {
-        val s = HttpServer.create(InetSocketAddress("127.0.0.1", port), 0)
+    private fun start(preferredPort: Int) {
+        val candidates = if (preferredPort == 0) listOf(0) else (preferredPort..preferredPort + 10).toList()
+        var s: HttpServer? = null
+        for (p in candidates) {
+            try {
+                s = HttpServer.create(InetSocketAddress("127.0.0.1", p), 0)
+                if (p != preferredPort) println("port $preferredPort is taken - sliding to $p")
+                break
+            } catch (_: java.net.BindException) {
+                // squatter on this port, try the next one
+            }
+        }
+        if (s == null) {
+            throw SkillIssue(
+                "ports $preferredPort through ${preferredPort + 10} are ALL taken - close something and run it back",
+            )
+        }
         val ex = Executors.newFixedThreadPool(4) { r -> Thread(r).apply { isDaemon = true } }
         s.createContext("/") { exchange ->
             if (exchange.requestURI.path == "/__rotlin/events") handleSse(exchange)

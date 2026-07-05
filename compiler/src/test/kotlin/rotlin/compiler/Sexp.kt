@@ -51,6 +51,8 @@ fun Node.sexp(): String = when (this) {
         append(")")
     }
     is MogStmt -> "(for $varName in ${iterable.sexp()} ${body.sexp()})"
+    is FinnaStmt -> "(try ${tryBlock.sexp()} catch $catchName ${catchBlock.sexp()})"
+    is CrashoutStmt -> "(throw ${value.sexp()})"
     is VarDecl -> buildString {
         append("(")
         if (gatekeep) append("gatekeep ")

@@ -160,6 +160,22 @@ data class MogStmt(
     override val col: Int,
 ) : Stmt
 
+/** `finna bet ... caught in 4k (oops) bet ... periodt` — try/catch. */
+data class FinnaStmt(
+    val tryBlock: Block,
+    val catchName: String,
+    val catchBlock: Block,
+    override val line: Int,
+    override val col: Int,
+) : Stmt
+
+/** `crashout <expr>` — throw a SkillIssue. */
+data class CrashoutStmt(
+    val value: Expr,
+    override val line: Int,
+    override val col: Int,
+) : Stmt
+
 enum class AssignOp(val kotlin: String) { SET("="), GAINS("+="), LOSES("-=") }
 
 data class Assign(

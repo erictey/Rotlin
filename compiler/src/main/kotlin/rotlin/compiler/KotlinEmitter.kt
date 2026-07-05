@@ -200,6 +200,18 @@ class KotlinEmitter {
                 write("for (${escapeName(stmt.varName)} in ${exprText(stmt.iterable)}) {")
                 emitBlockBody(stmt.body)
             }
+            is FinnaStmt -> {
+                anchor(stmt.line + PRELUDE_LINES)
+                write("try {")
+                emitBlockBody(stmt.tryBlock)
+                anchor(stmt.catchBlock.line + PRELUDE_LINES)
+                write("catch (${escapeName(stmt.catchName)}: Exception) {")
+                emitBlockBody(stmt.catchBlock)
+            }
+            is CrashoutStmt -> {
+                anchor(stmt.line + PRELUDE_LINES)
+                write("throw SkillIssue(lore(${exprText(stmt.value)}))")
+            }
             is Assign -> {
                 anchor(stmt.line + PRELUDE_LINES)
                 write("${exprText(stmt.target)} ${stmt.op.kotlin} ${exprText(stmt.value)}")

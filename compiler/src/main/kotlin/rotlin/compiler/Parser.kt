@@ -173,14 +173,11 @@ class Parser(rawTokens: List<Token>, private val diags: DiagnosticBag) {
             VIBE -> parseVibe()
             VIBECHECK -> parseVibecheck()
             MOG -> parseMog()
+            FINNA -> parseFinna()
+            CRASHOUT -> parseCrashout()
             GATEKEEP, REMIX -> {
                 error("E_MODIFIER_NOWHERE", "`${peek().text}` only makes sense inside a sigma/npc/vibe",
                     peek(), hint = "move this into a class body")
-                synchronize(); null
-            }
-            FINNA, CRASHOUT -> {
-                error("E_NOT_YET", "`${peek().text}` isn't in this build yet - coming soon fr",
-                    peek())
                 synchronize(); null
             }
             SUMMON -> {
@@ -385,6 +382,28 @@ class Parser(rawTokens: List<Token>, private val diags: DiagnosticBag) {
         return VibecheckStmt(subject, branches, endTok.line, kw.line, kw.col)
     }
 
+    private fun parseFinna(): Stmt? {
+        val kw = advance()
+        // `caught in 4k` closes the try block, mirroring how bruh closes sus
+        val tryBlock = parseBlock(stopAtToken = CAUGHT_IN_4K) ?: return null
+        skipNewlines()
+        if (expect(CAUGHT_IN_4K, "`caught in 4k (name)` after the finna block") == null) {
+            synchronize(); return null
+        }
+        expect(LPAREN, "`(` after `caught in 4k`")
+        val name = expect(IDENT, "a name for what got caught, like `(oops)`") ?: run { synchronize(); return null }
+        expect(RPAREN, "`)` after the name")
+        val catchBlock = parseBlock() ?: return null
+        return FinnaStmt(tryBlock, name.text, catchBlock, kw.line, kw.col)
+    }
+
+    private fun parseCrashout(): Stmt {
+        val kw = advance()
+        val value = parseExpression() ?: StringTmpl(listOf(TmplNode.Text("crashout")), kw.line, kw.col)
+        expectStmtEnd()
+        return CrashoutStmt(value, kw.line, kw.col)
+    }
+
     private fun parseMog(): Stmt? {
         val kw = advance()
         expect(LPAREN, "`(` after `mog`")
@@ -402,7 +421,7 @@ class Parser(rawTokens: List<Token>, private val diags: DiagnosticBag) {
         val cond = parseExpression() ?: run { synchronize(); return null }
         expect(RPAREN, "`)` after the condition")
         // `bruh` may close the then-block directly - no periodt needed before it
-        val thenBlock = parseBlock(stopAtBruh = true) ?: return null
+        val thenBlock = parseBlock(stopAtToken = BRUH) ?: return null
 
         var elseBranch: Node? = null
         val save = idx
@@ -476,14 +495,14 @@ class Parser(rawTokens: List<Token>, private val diags: DiagnosticBag) {
 
     // ---- blocks -----------------------------------------------------------
 
-    private fun parseBlock(stopAtBruh: Boolean = false): Block? {
+    private fun parseBlock(stopAtToken: TokenType? = null): Block? {
         skipNewlines()
         val bet = expect(BET, "`bet` to open the block") ?: run { synchronize(); return null }
         val stmts = mutableListOf<Stmt>()
         while (true) {
             skipNewlines()
-            if (stopAtBruh && at(BRUH)) {
-                // bruh closes this block; caller consumes it for the else branch
+            if (stopAtToken != null && at(stopAtToken)) {
+                // bruh / caught in 4k closes this block; caller consumes it
                 return Block(stmts, bet.line, bet.col, peek().line)
             }
             if (at(PERIODT)) break

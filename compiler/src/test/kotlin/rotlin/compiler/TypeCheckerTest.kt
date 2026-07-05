@@ -248,6 +248,24 @@ class TypeCheckerTest {
         assertClean("rizz x = 5\nvibecheck (x) bet\n1 -> yap(1)\nbruh -> yap(0)\nperiodt\n")
     }
 
+    // ---- exceptions ----
+
+    @Test
+    fun `finna scopes the catch name to the catch block`() {
+        assertClean("finna bet\nyap(1)\ncaught in 4k (oops) bet\nyap(oops)\nperiodt\n")
+        assertEquals(
+            listOf("E_WHO_IS_THAT"),
+            errorCodes("finna bet\nyap(1)\ncaught in 4k (oops) bet\nyap(1)\nperiodt\nyap(oops)\n"),
+        )
+    }
+
+    @Test
+    fun `crashout counts as a returning path`() {
+        assertClean(
+            "skibidi f(x: aura) spits aura bet\nsus (x clears 0) bet\nyeet x\nbruh bet\ncrashout \"negative aura\"\nperiodt\nperiodt\n",
+        )
+    }
+
     // ---- web dsl scoping ----
 
     @Test

@@ -277,6 +277,19 @@ class ParserTest {
     }
 
     @Test
+    fun `finna caught in 4k closes the try block like bruh`() {
+        assertEquals(
+            "(try {(call risky)} catch oops {(call yap oops)})",
+            sexp("finna bet\nrisky()\ncaught in 4k (oops) bet\nyap(oops)\nperiodt"),
+        )
+    }
+
+    @Test
+    fun `crashout parses a throw`() {
+        assertEquals("(throw (str \"bruh moment\"))", sexp("crashout \"bruh moment\""))
+    }
+
+    @Test
     fun `indexing parses and can be assigned`() {
         assertEquals("([] xs 0)", exprSexp("xs[0]"))
         assertEquals("(= ([] xs 0) 5)", sexp("xs[0] = 5"))
